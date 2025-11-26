@@ -538,20 +538,34 @@
         function deleteProject(id, e) {
             e.stopPropagation();
             showConfirm("Delete Project?", "This cannot be undone.", () => {
-                // Remove data
+                // 1. Determine sort order to find "next" project logic
+                // The UI list is sorted by 'updated' desc, so we match that to find the visual neighbor
+                const allProjects = getProjectsMeta().sort((a,b) => b.updated - a.updated);
+                const delIndex = allProjects.findIndex(p => p.id === id);
+
+                // 2. Remove data
                 localStorage.removeItem(`shopTracker_data_${id}`);
                 
-                // Remove from meta
-                let meta = getProjectsMeta().filter(p => p.id !== id);
-                saveProjectMeta(meta);
+                // 3. Remove from meta
+                const updatedMeta = allProjects.filter(p => p.id !== id);
+                saveProjectMeta(updatedMeta);
 
-                // If active, switch to another
+                // 4. If we deleted the ACTIVE project, switch intelligently
                 if (currentProject.id === id) {
-                    if (meta.length > 0) loadProject(meta[0].id);
-                    else createNewProject();
-                } else {
-                    renderProjectsList(); // Just refresh list
+                    if (updatedMeta.length > 0) {
+                        // Try to take the item at the same visual index (the one below it), 
+                        // otherwise take the last item (if we deleted the bottom one)
+                        const nextIndex = delIndex < updatedMeta.length ? delIndex : updatedMeta.length - 1;
+                        loadProject(updatedMeta[nextIndex].id);
+                    } else {
+                        // No projects left? Create a new one
+                        createNewProject();
+                        return; // createNewProject handles UI updates/closing
+                    }
                 }
+                
+                // 5. Refresh the modal list to show the deletion and new active state
+                renderProjectsList();
             });
         }
 
