@@ -335,6 +335,34 @@
         function cleanUrl(url) {
             try {
                 const urlObj = new URL(url);
+                const hostname = urlObj.hostname;
+                const path = urlObj.pathname;
+
+                // Amazon cleaning
+                if (hostname.includes('amazon')) {
+                    const asinMatch = path.match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/);
+                    if (asinMatch) {
+                        return `https://${hostname}/dp/${asinMatch[2]}`;
+                    }
+                }
+
+                // AliExpress cleaning
+                if (hostname.includes('aliexpress')) {
+                    // Match /item/123456.html OR /item/123456 (optional .html)
+                    const itemMatch = path.match(/\/item\/(\d+)(?:\.html)?/);
+                    if (itemMatch) {
+                        return `https://${hostname}/item/${itemMatch[1]}.html`;
+                    }
+                }
+
+                // eBay cleaning
+                if (hostname.includes('ebay')) {
+                    const itmMatch = path.match(/\/itm\/(?:.*\/)?(\d+)/);
+                    if (itmMatch) {
+                        return `https://${hostname}/itm/${itmMatch[1]}`;
+                    }
+                }
+
                 return urlObj.origin + urlObj.pathname;
             } catch (e) {
                 return url;
@@ -350,58 +378,114 @@
             }
         }
 
-        // Dedicated Metadata Fetcher with Fallback Strategy
-        async function fetchMetadata(url) {
+        // Helper to extract ASIN from Amazon URL
+        function getAmazonAsin(url) {
+            try {
+                const urlObj = new URL(url);
+                if (urlObj.hostname.includes('amazon')) {
+                    const match = urlObj.pathname.match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/);
+                    return match ? match[2] : null;
+                }
+            } catch (e) {
+                return null;
+            }
+            return null;
+        }
+
+        // Helper to extract a readable title from the URL text itself
+        function inferTitleFromUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                const path = urlObj.pathname;
+                let slug = "";
+
+                if (urlObj.hostname.includes('amazon')) {
+                    const match = path.match(/^\/([^\/]+)\/(dp|gp\/product)/);
+                    if (match && match[1] !== 'dp' && match[1] !== 'gp') {
+                        slug = match[1];
+                    }
+                }
+                else if (urlObj.hostname.includes('ebay')) {
+                    const match = path.match(/\/itm\/([^\/]+)\/\d+/);
+                    if (match) slug = match[1];
+                }
+
+                if (slug) {
+                    return decodeURIComponent(slug).replace(/[-_]/g, ' ');
+                }
+            } catch (e) {
+                return "";
+            }
+            return "";
+        }
+
+        // Dedicated Metadata Fetcher with Simple Strategy
+        async function fetchMetadata(url, rawInputUrl, forceScreenshot = false) {
             let result = { title: "", image: "", description: "" };
             let success = false;
 
-            // Strategy 1: Microlink (Primary)
+            // PREPARATION: Create a "Scraping Safe" URL
+            let scrapeUrl = url;
+            if (url.includes('aliexpress.us')) {
+                scrapeUrl = url.replace('aliexpress.us', 'aliexpress.com');
+            }
+
+            // Strategy 1: Microlink (Clean & Simple)
             try {
-                let scrapeUrl = url;
-                if (url.includes('aliexpress.us')) {
-                    scrapeUrl = url.replace('aliexpress.us', 'aliexpress.com');
+                let apiUrl = `https://api.microlink.io?url=${encodeURIComponent(scrapeUrl)}`;
+                
+                if (forceScreenshot) {
+                    apiUrl += '&screenshot=true&meta=false&overlay.browser=dark'; 
+                } else {
+                    apiUrl += '&meta=true';
                 }
 
-                const apiUrl = `https://api.microlink.io?url=${encodeURIComponent(scrapeUrl)}&screenshot=true&meta=true`;
                 const response = await fetch(apiUrl);
                 const json = await response.json();
 
                 if (json.status === 'success') {
                     const data = json.data;
-                    result.title = data.title || "";
-                    result.image = data.image?.url || data.screenshot?.url || "";
-                    result.description = data.description || "";
-                    success = true;
+                    
+                    if (!forceScreenshot) {
+                        if (data.title && !data.title.includes("Amazon.com") && !data.title.includes("Page Not Found")) {
+                            result.title = data.title;
+                        }
+                        result.image = data.image?.url || "";
+                        result.description = data.description || "";
+                    } else {
+                        // Screenshot Mode
+                        if (data.screenshot?.url) {
+                            result.image = data.screenshot.url;
+                            success = true;
+                        }
+                    }
+                    
+                    if (!forceScreenshot && (result.title || result.image)) {
+                        success = true;
+                    }
                 }
             } catch (e) {
                 console.warn("Microlink failed, trying fallback...", e);
             }
 
-            // Strategy 2: AllOrigins + Client-Side Parsing (Fallback)
-            if (!success || (!result.title && !result.image)) {
-                try {
-                    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-                    const data = await response.json();
-                    
-                    if (data.contents) {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(data.contents, "text/html");
-                        
-                        const getMeta = (prop) => doc.querySelector(`meta[property="${prop}"]`)?.content || 
-                                                  doc.querySelector(`meta[name="${prop}"]`)?.content || "";
-                        
-                        result.title = getMeta("og:title") || doc.title || "";
-                        result.image = getMeta("og:image") || "";
-                        result.description = getMeta("og:description") || getMeta("description") || "";
-                        
-                        if (result.title || result.image) success = true;
-                    }
-                } catch (e) {
-                    console.warn("AllOrigins fallback failed", e);
+            // Strategy 2: Amazon Specific Heuristics (The "Magic")
+            // Always run this if image missing, regardless of Microlink success
+            if (!result.image && !forceScreenshot) {
+                const asin = getAmazonAsin(url);
+                if (asin) {
+                    result.image = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.L.jpg`;
                 }
             }
 
-            // Fallback for Title
+            // Strategy 3: Title Fallback via URL Slug
+            if (!result.title || result.title === "Amazon.com" || result.title.includes("Page Not Found")) {
+                const inferredTitle = inferTitleFromUrl(rawInputUrl || url);
+                if (inferredTitle) {
+                    result.title = inferredTitle; 
+                }
+            }
+
+            // Final Fallback
             if (!result.title) {
                  try {
                      const hostname = new URL(url).hostname.replace('www.', '');
@@ -420,7 +504,6 @@
 
             if (!rawUrl) return;
 
-            // Validation
             if (!isValidUrl(rawUrl)) {
                 alert("Please enter a valid URL starting with http:// or https://");
                 return;
@@ -429,7 +512,6 @@
             const url = cleanUrl(rawUrl);
             const tempId = Date.now();
 
-            // 1. Add "Pending" Item immediately
             const newItem = {
                 id: tempId,
                 url: url,
@@ -445,15 +527,12 @@
             renderItems();
             saveToLocal();
 
-            // Clear input immediately
             input.value = '';
             input.focus();
 
-            // 2. Fetch data
             try {
-                const data = await fetchMetadata(url);
+                const data = await fetchMetadata(url, rawUrl, false);
 
-                // Smart Price Scanner
                 let extractedPrice = null;
                 const priceRegex = /(\$|USD|€|£)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i;
                 const textToScan = (data.title + " " + data.description);
@@ -476,7 +555,7 @@
                 }
 
             } catch (error) {
-                console.error("All fetch strategies failed:", error);
+                console.error("Fetch failed:", error);
                 const index = items.findIndex(i => i.id === tempId);
                 if (index !== -1) {
                     items[index] = {
@@ -490,6 +569,48 @@
                 }
             }
 
+            renderItems();
+            saveToLocal();
+        }
+
+        // REDESIGNED: Force Screenshot with Fallbacks
+        async function reloadItemWithScreenshot(id) {
+            const index = items.findIndex(i => i.id === id);
+            if (index === -1) return;
+
+            const item = items[index];
+            items[index] = { ...item, loading: true };
+            renderItems();
+
+            let finalImage = "";
+
+            try {
+                // Attempt 1: Microlink Screenshot
+                const data = await fetchMetadata(item.url, "", true);
+                
+                if (data.image && data.image.startsWith('http')) {
+                    finalImage = data.image;
+                } else {
+                    throw new Error("Microlink Screenshot failed");
+                }
+
+            } catch (e) {
+                console.warn("Microlink screenshot failed, switching to Thum.io fallback", e);
+                // Attempt 2: Thum.io (Very robust fallback)
+                let scrapeUrl = item.url;
+                if (scrapeUrl.includes('aliexpress.us')) {
+                    scrapeUrl = scrapeUrl.replace('aliexpress.us', 'aliexpress.com');
+                }
+                finalImage = `https://image.thum.io/get/width/1024/crop/800/noanimate/${encodeURIComponent(scrapeUrl)}`;
+            }
+            
+            // Update
+            items[index] = {
+                ...items[index],
+                image: finalImage,
+                loading: false
+            };
+            
             renderItems();
             saveToLocal();
         }
@@ -622,6 +743,7 @@
                         </span>
                         <div class="flex gap-2 ml-auto">
                             <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="reloadItemWithScreenshot(${item.id})" class="text-slate-400 hover:text-purple-600 transition p-1" title="Reload with Screenshot"><i class="fa-solid fa-camera"></i></button>
                             <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     `;
@@ -630,6 +752,7 @@
                     footerContent = `
                         <div class="flex gap-2 ml-auto">
                             <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="reloadItemWithScreenshot(${item.id})" class="text-slate-400 hover:text-purple-600 transition p-1" title="Reload with Screenshot"><i class="fa-solid fa-camera"></i></button>
                             <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     `;
@@ -733,7 +856,7 @@
             if(editTitleBtn) editTitleBtn.classList.add('pdf-hide'); // Hide edit icon
             
             // Hide delete/edit buttons inside cards
-            const actionButtons = document.querySelectorAll('.fa-trash, .fa-pen-to-square');
+            const actionButtons = document.querySelectorAll('.fa-trash, .fa-pen-to-square, .fa-camera');
             actionButtons.forEach(el => el.parentElement.style.display = 'none');
 
             // Generate
