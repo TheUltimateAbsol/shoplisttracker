@@ -382,9 +382,15 @@
         function getAmazonAsin(url) {
             try {
                 const urlObj = new URL(url);
-                if (urlObj.hostname.includes('amazon')) {
-                    const match = urlObj.pathname.match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/);
-                    return match ? match[2] : null;
+                if (urlObj.hostname.includes('amazon') || urlObj.hostname.includes('amzn')) {
+                    // Match /dp/ASIN, /gp/product/ASIN, or /ASIN/
+                    const match = urlObj.pathname.match(/\/(dp|gp\/product|exec\/obidos\/asin)\/([A-Z0-9]{10})/);
+                    if (match) {
+                        console.log(`[Amazon Debug] Found ASIN: ${match[2]}`);
+                        return match[2];
+                    } else {
+                        console.log(`[Amazon Debug] No ASIN found in path: ${urlObj.pathname}`);
+                    }
                 }
             } catch (e) {
                 return null;
@@ -419,57 +425,155 @@
             return "";
         }
 
+        // NEW: AliExpress Regex Hunter
+        function findAliExpressImageInText(text) {
+            const regex = /(https?:\/\/[^\s"']+\.alicdn\.com\/kf\/[^\s"']+\.(?:jpg|png))/i;
+            const match = text.match(regex);
+            return match ? match[1] : null;
+        }
+
         // Dedicated Metadata Fetcher with Simple Strategy
         async function fetchMetadata(url, rawInputUrl, forceScreenshot = false) {
             let result = { title: "", image: "", description: "" };
             let success = false;
 
+            console.log(`[Metadata] Starting fetch for: ${url}`);
+
             // PREPARATION: Create a "Scraping Safe" URL
             let scrapeUrl = url;
-            if (url.includes('aliexpress.us')) {
-                scrapeUrl = url.replace('aliexpress.us', 'aliexpress.com');
+            let isAliExpress = false;
+            
+            if (url.includes('aliexpress')) {
+                isAliExpress = true;
+                // Trick: Use mobile site (.com) for lighter HTML and less blocking
+                // FIX: Use URL object to cleanly swap hostname without duplicate replacements
+                try {
+                    const u = new URL(url);
+                    // Just set hostname to mobile site
+                    u.hostname = 'm.aliexpress.com';
+                    scrapeUrl = u.toString();
+                } catch (e) {
+                    // Fallback safe replace
+                    scrapeUrl = url.replace(/https?:\/\/(www\.)?aliexpress\.(us|com)/, 'https://m.aliexpress.com');
+                }
             }
 
-            // Strategy 1: Microlink (Clean & Simple)
-            try {
-                let apiUrl = `https://api.microlink.io?url=${encodeURIComponent(scrapeUrl)}`;
-                
-                if (forceScreenshot) {
-                    apiUrl += '&screenshot=true&meta=false&overlay.browser=dark'; 
-                } else {
-                    apiUrl += '&meta=true';
-                }
+            // PRE-CALCULATE: Amazon Image High Priority
+            let amazonAsin = getAmazonAsin(url);
+            if (!forceScreenshot && amazonAsin) {
+                console.log(`[Amazon Debug] Pre-setting Amazon Image for ASIN: ${amazonAsin}`);
+                // Use legacy SSL endpoint which is reliable
+                result.image = `https://images-na.ssl-images-amazon.com/images/P/${amazonAsin}.01.L.jpg`;
+            }
 
-                const response = await fetch(apiUrl);
-                const json = await response.json();
-
-                if (json.status === 'success') {
-                    const data = json.data;
+            // Strategy 1: Microlink (Primary Metadata API)
+            if (!result.image || isAliExpress) { 
+                try {
+                    console.log(`[Metadata] Strategy 1: Microlink for ${scrapeUrl}`);
+                    let apiUrl = `https://api.microlink.io?url=${encodeURIComponent(scrapeUrl)}`;
                     
-                    if (!forceScreenshot) {
-                        if (data.title && !data.title.includes("Amazon.com") && !data.title.includes("Page Not Found")) {
-                            result.title = data.title;
-                        }
-                        result.image = data.image?.url || "";
-                        result.description = data.description || "";
+                    if (forceScreenshot) {
+                        apiUrl += '&screenshot=true&meta=false&overlay.browser=dark'; 
                     } else {
-                        // Screenshot Mode
-                        if (data.screenshot?.url) {
-                            result.image = data.screenshot.url;
+                        apiUrl += '&meta=true';
+                    }
+
+                    const response = await fetch(apiUrl);
+                    const json = await response.json();
+
+                    if (json.status === 'success') {
+                        const data = json.data;
+                        
+                        if (!forceScreenshot) {
+                            if (data.title && !data.title.includes("Amazon.com") && !data.title.includes("Page Not Found")) {
+                                result.title = data.title;
+                            }
+                            
+                            // Update resolved URL if we were redirected
+                            if (!amazonAsin && data.url) {
+                                amazonAsin = getAmazonAsin(data.url);
+                                if (amazonAsin) {
+                                    result.image = `https://images-na.ssl-images-amazon.com/images/P/${amazonAsin}.01.L.jpg`;
+                                }
+                            }
+
+                            // If we don't have an Amazon image, use the Microlink one
+                            if (!result.image) { 
+                                result.image = data.image?.url || "";
+                            }
+                            
+                            result.description = data.description || "";
+                        } else {
+                            if (data.screenshot?.url) {
+                                result.image = data.screenshot.url;
+                                success = true;
+                            }
+                        }
+                        
+                        if (!forceScreenshot && (result.title || result.image)) {
                             success = true;
                         }
                     }
-                    
-                    if (!forceScreenshot && (result.title || result.image)) {
-                        success = true;
-                    }
+                } catch (e) {
+                    console.warn("Microlink failed", e);
                 }
-            } catch (e) {
-                console.warn("Microlink failed, trying fallback...", e);
             }
 
-            // Strategy 2: Amazon Specific Heuristics (The "Magic")
-            // Always run this if image missing, regardless of Microlink success
+            // Strategy 2: LinkPreview.net (Fallback 1)
+            if ((!success || !result.title || !result.image) && !forceScreenshot && !isAliExpress) {
+                console.log(`[Metadata] Strategy 2: LinkPreview.net`);
+                try {
+                    const response = await fetch(`https://api.linkpreview.net/?q=${encodeURIComponent(url)}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (!result.title) result.title = data.title || "";
+                        if (!result.image) result.image = data.image || ""; 
+                        if (!result.description) result.description = data.description || "";
+                        if (result.title || result.image) success = true;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // Strategy 3: AllOrigins (Proxy) + Regex Hunting (Special for AliExpress)
+            if ((!success || (isAliExpress && !result.image)) && !forceScreenshot) {
+                console.log(`[Metadata] Strategy 3: AllOrigins + Regex Hunter for ${scrapeUrl}`);
+                try {
+                    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(scrapeUrl)}`);
+                    const data = await response.json();
+                    
+                    if (data.contents) {
+                        const rawHtml = data.contents;
+                        
+                        // 3a. Ali Express Magic: Regex Hunt for Image
+                        if (isAliExpress && !result.image) {
+                            const aliImage = findAliExpressImageInText(rawHtml);
+                            if (aliImage) {
+                                console.log(`[AliExpress Magic] Found image via Regex: ${aliImage}`);
+                                result.image = aliImage;
+                            }
+                        }
+
+                        // 3b. Standard OpenGraph parsing
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(rawHtml, "text/html");
+                        
+                        const getMeta = (prop) => doc.querySelector(`meta[property="${prop}"]`)?.content || 
+                                                  doc.querySelector(`meta[name="${prop}"]`)?.content || "";
+                        
+                        if (!result.title) result.title = getMeta("og:title") || doc.title || "";
+                        if (!result.image) result.image = getMeta("og:image") || "";
+                        
+                        // Clean AliExpress Title
+                        if (result.title && result.title.includes(" | AliExpress")) {
+                            result.title = result.title.split(" | AliExpress")[0];
+                        }
+                    }
+                } catch (e) {
+                    console.warn("AllOrigins fallback failed", e);
+                }
+            }
+
+            // Strategy 4: Amazon Late-Bind (Just in case)
             if (!result.image && !forceScreenshot) {
                 const asin = getAmazonAsin(url);
                 if (asin) {
@@ -477,15 +581,21 @@
                 }
             }
 
-            // Strategy 3: Title Fallback via URL Slug
+            // Strategy 5: Title Fallback via URL
             if (!result.title || result.title === "Amazon.com" || result.title.includes("Page Not Found")) {
                 const inferredTitle = inferTitleFromUrl(rawInputUrl || url);
-                if (inferredTitle) {
-                    result.title = inferredTitle; 
-                }
+                if (inferredTitle) result.title = inferredTitle; 
             }
 
-            // Final Fallback
+            // Final Fallback: Thum.io
+            if (!result.image && !forceScreenshot) {
+                console.log("[Metadata] Triggering Final Fallback: Auto-Screenshot (Thum.io)");
+                let thumUrl = url;
+                if (thumUrl.includes('aliexpress.us')) thumUrl = thumUrl.replace('aliexpress.us', 'aliexpress.com');
+                result.image = `https://image.thum.io/get/width/400/crop/800/noanimate/${encodeURIComponent(thumUrl)}`;
+            }
+
+            // Final Fallback for Title
             if (!result.title) {
                  try {
                      const hostname = new URL(url).hostname.replace('www.', '');
@@ -495,6 +605,7 @@
                 }
             }
 
+            console.log(`[Metadata] Final Result:`, result);
             return result;
         }
 
@@ -586,6 +697,7 @@
 
             try {
                 // Attempt 1: Microlink Screenshot
+                console.log("Triggering Manual Screenshot: Microlink");
                 const data = await fetchMetadata(item.url, "", true);
                 
                 if (data.image && data.image.startsWith('http')) {
@@ -597,6 +709,7 @@
             } catch (e) {
                 console.warn("Microlink screenshot failed, switching to Thum.io fallback", e);
                 // Attempt 2: Thum.io (Very robust fallback)
+                console.log("Triggering Manual Screenshot Fallback: Thum.io");
                 let scrapeUrl = item.url;
                 if (scrapeUrl.includes('aliexpress.us')) {
                     scrapeUrl = scrapeUrl.replace('aliexpress.us', 'aliexpress.com');
@@ -607,6 +720,7 @@
             // Update
             items[index] = {
                 ...items[index],
+                // Only update image, keep title
                 image: finalImage,
                 loading: false
             };
