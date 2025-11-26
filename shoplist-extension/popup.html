@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { width: 320px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; background: #f8fafc; }
+        .header { background: #ffffff; padding: 15px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 16px; color: #1e293b; }
+        .content { padding: 15px; max-height: 400px; overflow-y: auto; }
+        .item { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
+        .item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #f1f5f9; }
+        .item-details { flex: 1; overflow: hidden; }
+        .item-title { font-size: 12px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-price { font-size: 12px; color: #059669; font-weight: bold; }
+        .actions { display: flex; gap: 10px; padding: 15px; background: white; border-top: 1px solid #e2e8f0; }
+        .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; text-align: center; text-decoration: none; }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-danger { background: #fee2e2; color: #ef4444; }
+        .btn-danger:hover { background: #fecaca; }
+        .empty-state { text-align: center; color: #94a3b8; padding: 30px 0; font-size: 13px; }
+        .delete-btn { background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 14px; }
+        .delete-btn:hover { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Clipped Items (<span id="count">0</span>)</h1>
+    </div>
+    <div class="content" id="list">
+        <!-- Items injected here -->
+    </div>
+    <div class="actions">
+        <button class="btn btn-danger" id="clearBtn">Clear</button>
+        <a href="https://theultimateabsol.github.io/shoplisttracker/" target="_blank" class="btn btn-primary">Go to List</a>
+    </div>
+    <!-- Reference external script to satisfy CSP -->
+    <script src="popup.js"></script>
+</body>
+</html>
