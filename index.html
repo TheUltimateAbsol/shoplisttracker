@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wishlist & Price Tracker</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- SortableJS (For Drag and Drop) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+    <!-- LZ-String (For URL Compression) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* PDF Specifics */
+        .pdf-hide { display: none !important; }
+        .item-card { break-inside: avoid; page-break-inside: avoid; }
+        
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Loading Skeleton Animation */
+        .skeleton {
+            background: #e2e8f0;
+            background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Dragging styles */
+        .sortable-ghost { opacity: 0.4; background: #f1f5f9; border: 2px dashed #cbd5e1; }
+        .sortable-drag { opacity: 1; background: white; transform: scale(1.02); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); z-index: 50; }
+        
+        /* Make the card feel draggable */
+        .item-card { cursor: grab; }
+        .item-card:active { cursor: grabbing; }
+        /* Ensure buttons inside card don't trigger drag immediately/annoyingly */
+        .item-card button, .item-card a { cursor: pointer; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                </div>
+                <h1 class="text-xl font-bold text-slate-800">ShopList<span class="text-blue-600">Tracker</span></h1>
+            </div>
+            
+            <div class="flex gap-2 md:gap-3 flex-wrap justify-center">
+                <button onclick="clearList()" class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-trash-can"></i> Clear
+                </button>
+                <button onclick="shareList()" class="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-share-nodes"></i> Share List
+                </button>
+                <button onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-lg shadow-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i> PDF
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+
+        <!-- Input Section -->
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-8" id="input-section">
+            <label class="block text-sm font-semibold text-slate-700 mb-2">Add New Item URL</label>
+            <div class="flex flex-col md:flex-row gap-3">
+                <input type="text" id="urlInput" placeholder="Paste Amazon, AliExpress, or eBay link here..." 
+                    class="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    onkeypress="handleEnter(event)">
+                <button onclick="processUrl()" id="addBtn" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition shadow-sm flex items-center justify-center gap-2 min-w-[140px]">
+                    <span id="btnText">Add Link</span>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 mt-2">
+                <i class="fa-solid fa-bolt mr-1"></i> 
+                Items process in the background. You can drag cards freely to reorder them.
+            </p>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2">
+            <h2 class="text-lg font-semibold text-slate-700">Your List (<span id="itemCount">0</span>)</h2>
+            
+            <div class="flex items-center gap-4">
+                 <div id="shareMessage" class="hidden text-sm text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full animate-fade-in-down">
+                    <i class="fa-solid fa-check mr-1"></i> Link copied!
+                </div>
+                
+                <button onclick="togglePrices()" id="priceToggleBtn" class="text-sm font-medium text-slate-500 hover:text-blue-600 transition flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100">
+                    <i class="fa-solid fa-eye-slash"></i> <span id="priceToggleText">Hide Prices</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Grid Container -->
+        <div id="list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20">
+            <!-- Items will be injected here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-20 hidden">
+            <div class="inline-block p-6 bg-slate-100 rounded-full text-slate-400 mb-4">
+                <i class="fa-solid fa-clipboard-list text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-medium text-slate-600">Your list is empty</h3>
+            <p class="text-slate-500">Paste a URL above to get started.</p>
+        </div>
+
+    </main>
+
+    <!-- Manual Entry/Edit Modal -->
+    <div id="itemModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all scale-100">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Edit Details</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="modalId">
+                <input type="hidden" id="modalOriginalUrl">
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Product Name</label>
+                    <input type="text" id="modalTitle" class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Price</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2 text-slate-500">$</span>
+                        <input type="number" step="0.01" id="modalPrice" placeholder="0.00" class="w-full pl-7 pr-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Image URL</label>
+                    <input type="text" id="modalImage" placeholder="https://..." class="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg transition">Cancel</button>
+                <button onclick="saveModalItem()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let items = [];
+        let showPrices = true;
+
+        // --- Init ---
+        window.addEventListener('DOMContentLoaded', () => {
+            // Check for shared data in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedData = urlParams.get('data');
+
+            if (sharedData) {
+                try {
+                    // Decompress and parse
+                    const jsonStr = LZString.decompressFromEncodedURIComponent(sharedData);
+                    if (jsonStr) {
+                        items = JSON.parse(jsonStr);
+                        // Clean URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        saveToLocal();
+                    }
+                } catch (e) {
+                    console.error("Failed to load shared data", e);
+                }
+            } else {
+                // Load from Local Storage
+                const localData = localStorage.getItem('shoppingListItems');
+                if (localData) {
+                    items = JSON.parse(localData);
+                }
+            }
+
+            renderItems();
+            initSortable();
+        });
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') processUrl();
+        }
+
+        function initSortable() {
+            const container = document.getElementById('list-container');
+            // Allow free drag and drop on the whole card
+            new Sortable(container, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                delay: 100, // Small delay prevents accidental drags when clicking buttons
+                delayOnTouchOnly: true,
+                onEnd: function (evt) {
+                    // Reorder array based on DOM
+                    const newItems = [];
+                    const cards = container.querySelectorAll('.item-card');
+                    cards.forEach(card => {
+                        const id = parseInt(card.dataset.id);
+                        const item = items.find(i => i.id === id);
+                        if(item) newItems.push(item);
+                    });
+                    items = newItems;
+                    saveToLocal();
+                }
+            });
+        }
+
+        function togglePrices() {
+            showPrices = !showPrices;
+            const btnText = document.getElementById('priceToggleText');
+            const btnIcon = document.querySelector('#priceToggleBtn i');
+            
+            if (showPrices) {
+                btnText.innerText = "Hide Prices";
+                btnIcon.className = "fa-solid fa-eye-slash";
+            } else {
+                btnText.innerText = "Show Prices";
+                btnIcon.className = "fa-solid fa-eye";
+            }
+            renderItems();
+        }
+
+        // --- Core Logic ---
+
+        function cleanUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                return urlObj.origin + urlObj.pathname;
+            } catch (e) {
+                return url;
+            }
+        }
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;  
+            }
+        }
+
+        async function processUrl() {
+            const input = document.getElementById('urlInput');
+            const rawUrl = input.value.trim();
+
+            if (!rawUrl) return;
+
+            // Validation
+            if (!isValidUrl(rawUrl)) {
+                alert("Please enter a valid URL starting with http:// or https://");
+                return;
+            }
+
+            const url = cleanUrl(rawUrl);
+            const tempId = Date.now();
+
+            // 1. Add "Pending" Item immediately
+            const newItem = {
+                id: tempId,
+                url: url,
+                title: "Loading...",
+                price: null, // Null means unknown
+                image: null,
+                loading: true,
+                error: false
+            };
+            
+            items.push(newItem);
+            renderItems();
+            saveToLocal();
+
+            // Clear input immediately so user can continue
+            input.value = '';
+            input.focus();
+
+            // 2. Fetch data in background
+            try {
+                // Microlink API
+                const apiUrl = `https://api.microlink.io?url=${encodeURIComponent(url)}`;
+                const response = await fetch(apiUrl);
+                const json = await response.json();
+
+                if (json.status !== 'success') throw new Error("Microlink failed");
+
+                const data = json.data;
+                const title = data.title || "Unknown Item";
+                const image = data.image?.url || "";
+                const description = data.description || "";
+                
+                // Smart Price Scanner
+                let extractedPrice = null;
+                const priceRegex = /(\$|USD|€|£)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i;
+                const priceMatch = title.match(priceRegex) || description.match(priceRegex);
+                
+                if (priceMatch) {
+                    let priceStr = priceMatch[2].replace(/,/g, ''); 
+                    extractedPrice = parseFloat(priceStr);
+                }
+
+                // Update the item in the array
+                const index = items.findIndex(i => i.id === tempId);
+                if (index !== -1) {
+                    items[index] = {
+                        ...items[index],
+                        title: title,
+                        price: extractedPrice,
+                        image: image,
+                        loading: false
+                    };
+                }
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                // Fallback to "Edit Me" state, don't delete
+                const index = items.findIndex(i => i.id === tempId);
+                if (index !== -1) {
+                    items[index] = {
+                        ...items[index],
+                        title: "Link (Edit details)",
+                        price: null,
+                        image: "",
+                        loading: false,
+                        error: true
+                    };
+                }
+            }
+
+            renderItems();
+            saveToLocal();
+        }
+
+        function saveToLocal() {
+            localStorage.setItem('shoppingListItems', JSON.stringify(items));
+        }
+
+        function removeItem(id) {
+            items = items.filter(item => item.id !== id);
+            renderItems();
+            saveToLocal();
+        }
+
+        function clearList() {
+            if(confirm("Are you sure you want to clear the list?")) {
+                items = [];
+                renderItems();
+                saveToLocal();
+            }
+        }
+
+        function shareList() {
+            // 1. Compress
+            const jsonStr = JSON.stringify(items);
+            const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+            
+            // 2. Build URL
+            const newUrl = `${window.location.origin}${window.location.pathname}?data=${compressed}`;
+            
+            // 3. Copy to clipboard
+            // Use fallback for iframes/security contexts where navigator.clipboard might fail
+            const textArea = document.createElement("textarea");
+            textArea.value = newUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                const msg = document.getElementById('shareMessage');
+                msg.innerText = successful ? "Link copied to clipboard!" : "Could not copy link.";
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+
+        // --- Rendering ---
+
+        function renderItems() {
+            const container = document.getElementById('list-container');
+            const emptyState = document.getElementById('empty-state');
+            const countEl = document.getElementById('itemCount');
+
+            container.innerHTML = '';
+            
+            if (items.length === 0) {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                countEl.innerText = '0';
+                return;
+            }
+
+            container.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            countEl.innerText = items.length;
+
+            items.forEach(item => {
+                const isPriceUnknown = item.price === null || item.price === undefined;
+                const priceDisplay = isPriceUnknown ? '$-.--' : '$' + parseFloat(item.price).toFixed(2);
+                
+                // Determine domain for badge
+                let domain = "Link";
+                if(item.url.includes("amazon")) domain = "Amazon";
+                else if(item.url.includes("aliexpress")) domain = "AliExpress";
+                else if(item.url.includes("ebay")) domain = "eBay";
+
+                // Image Logic
+                let imgContent = '';
+                if (item.loading) {
+                    imgContent = `<div class="w-full h-48 skeleton"></div>`;
+                } else if (item.image) {
+                    imgContent = `<img src="${item.image}" class="w-full h-48 object-cover group-hover:scale-105 transition duration-500" onerror="this.src='https://placehold.co/400x300?text=No+Image'">`;
+                } else {
+                    imgContent = `<div class="w-full h-48 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = "item-card bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition group relative flex flex-col";
+                card.dataset.id = item.id;
+                
+                let contentHtml = '';
+                
+                // Visibility Logic for Price
+                const priceVisibilityClass = showPrices ? '' : 'invisible';
+
+                if (item.loading) {
+                    contentHtml = `
+                        <div class="relative overflow-hidden cursor-progress">
+                            ${imgContent}
+                        </div>
+                        <div class="p-4 flex flex-col flex-1 space-y-3">
+                            <div class="h-4 bg-slate-200 rounded w-3/4 skeleton"></div>
+                            <div class="h-4 bg-slate-200 rounded w-1/2 skeleton"></div>
+                        </div>
+                    `;
+                } else {
+                    contentHtml = `
+                        <a href="${item.url}" target="_blank" class="block relative overflow-hidden">
+                            <span class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm z-10">${domain}</span>
+                            ${imgContent}
+                        </a>
+                        <div class="p-4 flex flex-col flex-1">
+                            <a href="${item.url}" target="_blank" class="text-slate-800 font-semibold leading-tight hover:text-blue-600 transition mb-2 line-clamp-2" title="${item.title}">
+                                ${item.title}
+                            </a>
+                            <div class="mt-auto flex justify-between items-center pt-3 border-t border-slate-100">
+                                <span class="text-xl font-bold ${isPriceUnknown ? 'text-slate-400' : 'text-emerald-600'} ${priceVisibilityClass}">
+                                    ${priceDisplay}
+                                </span>
+                                <div class="flex gap-2">
+                                    <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = contentHtml;
+                container.appendChild(card);
+            });
+        }
+
+        // --- Modal Logic ---
+
+        const modal = document.getElementById('itemModal');
+
+        function openModal(data) {
+            document.getElementById('modalId').value = data.id;
+            document.getElementById('modalOriginalUrl').value = data.url;
+            document.getElementById('modalTitle').value = data.title;
+            // If price is null, show empty string, otherwise value
+            document.getElementById('modalPrice').value = (data.price === null || data.price === undefined) ? '' : data.price;
+            document.getElementById('modalImage').value = data.image || '';
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+        }
+
+        function editItem(id) {
+            const item = items.find(i => i.id === id);
+            if (item) openModal(item);
+        }
+
+        function saveModalItem() {
+            const id = parseInt(document.getElementById('modalId').value);
+            const title = document.getElementById('modalTitle').value;
+            const priceInput = document.getElementById('modalPrice').value;
+            const image = document.getElementById('modalImage').value;
+
+            // Allow price to be empty (null)
+            const price = priceInput === '' ? null : parseFloat(priceInput);
+
+            const index = items.findIndex(i => i.id === id);
+            if (index !== -1) {
+                items[index] = {
+                    ...items[index],
+                    title: title || "Unknown Item",
+                    price: price,
+                    image: image
+                };
+                renderItems();
+                saveToLocal();
+            }
+            closeModal();
+        }
+
+        // --- PDF Generation ---
+
+        function downloadPDF() {
+            const element = document.body;
+            const inputSection = document.getElementById('input-section');
+            const nav = document.querySelector('nav');
+            const priceToggleBtn = document.getElementById('priceToggleBtn');
+            
+            // Temporary Style Changes for PDF
+            inputSection.classList.add('pdf-hide');
+            nav.classList.add('pdf-hide');
+            priceToggleBtn.classList.add('pdf-hide'); // Hide the toggle button itself in PDF
+            
+            // Hide delete/edit buttons
+            const actionButtons = document.querySelectorAll('.fa-trash, .fa-pen-to-square');
+            actionButtons.forEach(el => el.parentElement.style.display = 'none');
+
+            // Generate
+            const opt = {
+                margin:       [10, 10],
+                filename:     'my_shopping_list.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                // Restore UI
+                inputSection.classList.remove('pdf-hide');
+                nav.classList.remove('pdf-hide');
+                priceToggleBtn.classList.remove('pdf-hide');
+                actionButtons.forEach(el => el.parentElement.style.display = '');
+            });
+        }
+
+    </script>
+</body>
+</html>
