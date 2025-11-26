@@ -9,7 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- FontAwesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     
     <!-- html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -69,22 +69,47 @@
 
     <!-- Navbar -->
     <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 text-white p-2 rounded-lg">
-                    <i class="fa-solid fa-cart-shopping"></i>
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            <!-- Left: Brand & Projects -->
+            <div class="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
+                <div class="flex items-center gap-2">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-slate-800 hidden sm:block">ShopList<span class="text-blue-600">Tracker</span></h1>
                 </div>
-                <h1 class="text-xl font-bold text-slate-800">ShopList<span class="text-blue-600">Tracker</span></h1>
+                
+                <div class="flex items-center gap-2 ml-2">
+                    <button onclick="openProjectsModal()" class="text-slate-600 hover:text-blue-600 transition flex items-center gap-2 text-sm font-semibold bg-slate-100 px-3 py-1.5 rounded-lg">
+                        <i class="fa-solid fa-folder-open"></i> Projects
+                    </button>
+                    
+                    <!-- Save Project Button (Initially Hidden) -->
+                    <button id="btnSaveProject" onclick="saveTransientProject()" class="hidden text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition flex items-center gap-2 text-sm font-semibold border border-emerald-200 px-3 py-1.5 rounded-lg animate-pulse">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Project
+                    </button>
+                </div>
             </div>
             
-            <div class="flex gap-2 md:gap-3 flex-wrap justify-center">
-                <button onclick="clearList()" class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition flex items-center gap-2">
-                    <i class="fa-solid fa-trash-can"></i> Clear
+            <!-- Center: History Controls (Undo/Redo only) -->
+            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                <button onclick="undo()" id="btnUndo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded transition" title="Undo (Ctrl+Z)">
+                    <i class="fa-solid fa-rotate-left"></i>
                 </button>
-                <button onclick="shareList()" id="shareBtn" class="px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition flex items-center gap-2">
-                    <i class="fa-solid fa-share-nodes"></i> Share List
+                <button onclick="redo()" id="btnRedo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed rounded transition" title="Redo (Ctrl+Y)">
+                    <i class="fa-solid fa-rotate-right"></i>
                 </button>
-                <button onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-white px-5 py-2 rounded-lg shadow-sm transition flex items-center gap-2">
+            </div>
+
+            <!-- Right: Actions -->
+            <div class="flex gap-2 flex-wrap justify-center">
+                <button onclick="clearList()" class="px-3 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-trash-can"></i> <span class="hidden sm:inline">Clear</span>
+                </button>
+                <button onclick="shareList()" id="shareBtn" class="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition flex items-center gap-2">
+                    <i class="fa-solid fa-share-nodes"></i> <span class="hidden sm:inline">Share</span>
+                </button>
+                <button onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg shadow-sm transition flex items-center gap-2 text-sm">
                     <i class="fa-solid fa-file-pdf"></i> PDF
                 </button>
             </div>
@@ -160,6 +185,41 @@
 
     </main>
 
+    <!-- Projects Modal -->
+    <div id="projectsModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">My Projects</h3>
+                <button onclick="closeProjectsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+            <div class="p-0 max-h-[60vh] overflow-y-auto">
+                <ul id="projectsList" class="divide-y divide-slate-100">
+                    <!-- Projects injected here -->
+                </ul>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200">
+                <button onclick="createNewProject()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Create New Project
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 text-center">
+            <div class="mb-4 text-yellow-500">
+                <i class="fa-solid fa-triangle-exclamation text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2" id="confirmTitle">Confirm Action</h3>
+            <p class="text-slate-600 mb-6" id="confirmMessage">Are you sure you want to do this?</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
+                <button id="confirmYesBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition">Yes, Proceed</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Manual Entry/Edit Modal -->
     <div id="itemModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all scale-100">
@@ -209,56 +269,312 @@
     </div>
 
     <script>
-        // --- State Management ---
-        let items = [];
-        let listTitle = "Your List";
+        // --- App State ---
+        // Structure: { id: string, title: string, items: [] }
+        
+        // UUID Helper for compatibility
+        function generateUUID() {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        let currentProject = {
+            id: generateUUID(),
+            title: "My List",
+            items: []
+        };
+        
+        let isTransient = false;
         let showPrices = true;
+        
+        // History stacks (Runtime only to save space, current state persists)
+        const MAX_HISTORY = 50;
+        let historyStack = []; // Array of { state: JSON_STRING, action: string }
+        let futureStack = [];
 
         // --- Init ---
         window.addEventListener('DOMContentLoaded', () => {
-            // Check for shared data in URL
+            initApp();
+            
+            // Keyboard shortcuts for Undo/Redo
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    e.preventDefault();
+                    undo();
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                    e.preventDefault();
+                    redo();
+                }
+            });
+        });
+
+        function initApp() {
+            // 1. Check for Shared URL Data (Import Logic)
             const urlParams = new URLSearchParams(window.location.search);
             const sharedData = urlParams.get('data');
 
             if (sharedData) {
                 try {
-                    // Decompress and parse
                     const jsonStr = LZString.decompressFromEncodedURIComponent(sharedData);
                     if (jsonStr) {
                         const parsed = JSON.parse(jsonStr);
                         
-                        // Handle backward compatibility (array vs object)
-                        if (Array.isArray(parsed)) {
-                            items = parsed;
-                        } else {
-                            items = parsed.items || [];
-                            listTitle = parsed.title || "Your List";
-                        }
+                        // Create a TRANSIENT project
+                        // Do NOT save to local yet
+                        currentProject = {
+                            id: generateUUID(),
+                            title: parsed.title ? `Imported: ${parsed.title}` : `Imported List (${new Date().toLocaleDateString()})`,
+                            items: Array.isArray(parsed) ? parsed : (parsed.items || [])
+                        };
+                        
+                        isTransient = true;
+                        historyStack = [];
+                        futureStack = [];
+                        refreshUI();
                         
                         // Clean URL
                         window.history.replaceState({}, document.title, window.location.pathname);
-                        saveToLocal();
+                        return; 
                     }
                 } catch (e) {
-                    console.error("Failed to load shared data", e);
-                }
-            } else {
-                // Load from Local Storage
-                const localData = localStorage.getItem('shoppingListItems');
-                const localTitle = localStorage.getItem('shoppingListTitle');
-                
-                if (localData) {
-                    items = JSON.parse(localData);
-                }
-                if (localTitle) {
-                    listTitle = localTitle;
+                    console.error("Import failed", e);
                 }
             }
 
+            // 2. Normal Load
+            const projectsMeta = getProjectsMeta();
+            const activeId = localStorage.getItem('shopTracker_activeId');
+
+            if (projectsMeta.length === 0) {
+                // MIGRATION: Check for old legacy data
+                const oldData = localStorage.getItem('shoppingListItems');
+                if (oldData) {
+                    const oldTitle = localStorage.getItem('shoppingListTitle') || "My List";
+                    const migratedProject = {
+                        id: generateUUID(),
+                        title: oldTitle,
+                        items: JSON.parse(oldData)
+                    };
+                    saveProjectToLocal(migratedProject);
+                    loadProject(migratedProject.id);
+                    // cleanup old keys
+                    localStorage.removeItem('shoppingListItems');
+                    localStorage.removeItem('shoppingListTitle');
+                } else {
+                    // Start Fresh
+                    createNewProject(false); // false = don't confirm
+                }
+            } else {
+                // Load active project or the first one
+                const targetId = projectsMeta.find(p => p.id === activeId) ? activeId : projectsMeta[0].id;
+                loadProject(targetId);
+            }
+        }
+
+        // --- Custom Confirmation Modal Logic ---
+        let pendingConfirmAction = null;
+
+        function showConfirm(title, message, action) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmMessage').innerText = message;
+            pendingConfirmAction = action;
+            
+            const yesBtn = document.getElementById('confirmYesBtn');
+            // Remove old listeners to prevent stacking
+            const newBtn = yesBtn.cloneNode(true);
+            yesBtn.parentNode.replaceChild(newBtn, yesBtn);
+            
+            newBtn.onclick = () => {
+                if (pendingConfirmAction) pendingConfirmAction();
+                closeConfirmModal();
+            };
+            
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            pendingConfirmAction = null;
+        }
+
+        // --- History System ---
+
+        function commitHistory(actionLabel) {
+            // 1. Push current state to history
+            const snapshot = JSON.stringify(currentProject);
+            historyStack.push({ state: snapshot, action: actionLabel });
+            
+            // 2. Limit depth
+            if (historyStack.length > MAX_HISTORY) {
+                historyStack.shift();
+            }
+            
+            // 3. Clear future
+            futureStack = [];
+            
+            updateHistoryUI();
+        }
+
+        function undo() {
+            if (historyStack.length === 0) return;
+
+            const currentState = JSON.stringify(currentProject);
+            const previous = historyStack.pop();
+            
+            futureStack.push({ state: currentState, action: "Undo: " + previous.action });
+            
+            // Restore
+            currentProject = JSON.parse(previous.state);
+            saveCurrentProjectState(); // Persist the undo
+            refreshUI();
+            updateHistoryUI();
+        }
+
+        function redo() {
+            if (futureStack.length === 0) return;
+
+            const currentState = JSON.stringify(currentProject);
+            const next = futureStack.pop();
+            
+            historyStack.push({ state: currentState, action: "Redo state" });
+            
+            // Restore
+            currentProject = JSON.parse(next.state);
+            saveCurrentProjectState();
+            refreshUI();
+            updateHistoryUI();
+        }
+
+        function updateHistoryUI() {
+            const undoBtn = document.getElementById('btnUndo');
+            const redoBtn = document.getElementById('btnRedo');
+            
+            if(undoBtn) undoBtn.disabled = historyStack.length === 0;
+            if(redoBtn) redoBtn.disabled = futureStack.length === 0;
+        }
+
+        // --- Project Management ---
+
+        function getProjectsMeta() {
+            const metaJson = localStorage.getItem('shopTracker_projects');
+            return metaJson ? JSON.parse(metaJson) : [];
+        }
+
+        function saveProjectMeta(metaList) {
+            localStorage.setItem('shopTracker_projects', JSON.stringify(metaList));
+        }
+
+        function saveCurrentProjectState() {
+            // If transient, switch to persistent now (Save Triggered by modification)
+            if (isTransient) {
+                isTransient = false;
+            }
+
+            // 1. Save actual data
+            localStorage.setItem(`shopTracker_data_${currentProject.id}`, JSON.stringify(currentProject));
+            localStorage.setItem('shopTracker_activeId', currentProject.id);
+
+            // 2. Update metadata list (title might have changed)
+            let meta = getProjectsMeta();
+            const existingIdx = meta.findIndex(p => p.id === currentProject.id);
+            const metaObj = { 
+                id: currentProject.id, 
+                title: currentProject.title, 
+                count: currentProject.items.length,
+                updated: Date.now() 
+            };
+
+            if (existingIdx >= 0) {
+                meta[existingIdx] = metaObj;
+            } else {
+                meta.push(metaObj);
+            }
+            saveProjectMeta(meta);
+        }
+
+        function saveProjectToLocal(project) {
+            // Helper to save a project object cleanly
+            localStorage.setItem(`shopTracker_data_${project.id}`, JSON.stringify(project));
+            let meta = getProjectsMeta();
+            if (!meta.find(p => p.id === project.id)) {
+                meta.push({ id: project.id, title: project.title, count: project.items.length, updated: Date.now() });
+                saveProjectMeta(meta);
+            }
+        }
+
+        function loadProject(id) {
+            const data = localStorage.getItem(`shopTracker_data_${id}`);
+            if (data) {
+                currentProject = JSON.parse(data);
+                isTransient = false; // Loaded projects are never transient
+                // Reset history stacks on project switch
+                historyStack = [];
+                futureStack = [];
+                
+                localStorage.setItem('shopTracker_activeId', id);
+                refreshUI();
+                updateHistoryUI();
+            }
+        }
+
+        function createNewProject() {
+            const newProj = {
+                id: generateUUID(),
+                title: "New List " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                items: []
+            };
+            
+            saveProjectToLocal(newProj);
+            loadProject(newProj.id);
+            closeProjectsModal();
+        }
+
+        function deleteProject(id, e) {
+            e.stopPropagation();
+            showConfirm("Delete Project?", "This cannot be undone.", () => {
+                // Remove data
+                localStorage.removeItem(`shopTracker_data_${id}`);
+                
+                // Remove from meta
+                let meta = getProjectsMeta().filter(p => p.id !== id);
+                saveProjectMeta(meta);
+
+                // If active, switch to another
+                if (currentProject.id === id) {
+                    if (meta.length > 0) loadProject(meta[0].id);
+                    else createNewProject();
+                } else {
+                    renderProjectsList(); // Just refresh list
+                }
+            });
+        }
+
+        function saveTransientProject() {
+            saveCurrentProjectState(); // This will flip isTransient to false and persist
+            refreshUI(); // Hides the button
+        }
+
+        // --- UI Rendering (Refactored for currentProject) ---
+
+        function refreshUI() {
             updateTitleUI();
+            
+            const btnSave = document.getElementById('btnSaveProject');
+            if (isTransient) {
+                btnSave.classList.remove('hidden');
+            } else {
+                btnSave.classList.add('hidden');
+            }
+
             renderItems();
             initSortable();
-        });
+        }
 
         function handleEnter(e) {
             if (e.key === 'Enter') processUrl();
@@ -266,32 +582,63 @@
 
         function initSortable() {
             const container = document.getElementById('list-container');
-            // Allow free drag and drop on the whole card
             new Sortable(container, {
                 animation: 150,
                 ghostClass: 'sortable-ghost',
                 dragClass: 'sortable-drag',
-                delay: 100, // Small delay prevents accidental drags when clicking buttons
+                delay: 100,
                 delayOnTouchOnly: true,
                 onEnd: function (evt) {
-                    // Reorder array based on DOM
+                    commitHistory("Reordered items");
+                    
+                    // Reorder based on DOM
                     const newItems = [];
                     const cards = container.querySelectorAll('.item-card');
                     cards.forEach(card => {
                         const id = parseInt(card.dataset.id);
-                        const item = items.find(i => i.id === id);
+                        const item = currentProject.items.find(i => i.id === id);
                         if(item) newItems.push(item);
                     });
-                    items = newItems;
-                    saveToLocal();
+                    currentProject.items = newItems;
+                    saveCurrentProjectState();
                 }
             });
         }
 
-        // --- Title Management ---
+        // --- Modals ---
+
+        function openProjectsModal() {
+            renderProjectsList();
+            document.getElementById('projectsModal').classList.remove('hidden');
+        }
+        function closeProjectsModal() {
+            document.getElementById('projectsModal').classList.add('hidden');
+        }
+
+        function renderProjectsList() {
+            const list = document.getElementById('projectsList');
+            const meta = getProjectsMeta().sort((a,b) => b.updated - a.updated);
+            
+            list.innerHTML = meta.map(p => `
+                <li class="p-4 flex justify-between items-center hover:bg-slate-50 cursor-pointer transition ${p.id === currentProject.id ? 'bg-blue-50 border-l-4 border-blue-500' : ''}"
+                    onclick="loadProject('${p.id}'); closeProjectsModal()">
+                    <div>
+                        <h4 class="font-semibold text-slate-800">${p.title}</h4>
+                        <p class="text-xs text-slate-500">${p.count} items • Last modified: ${new Date(p.updated).toLocaleDateString()}</p>
+                    </div>
+                    ${meta.length > 1 ? `
+                    <button onclick="deleteProject('${p.id}', event)" class="text-slate-400 hover:text-red-600 p-2 rounded-full hover:bg-white transition">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>` : ''}
+                </li>
+            `).join('');
+        }
+
+        // --- Logic Functions (Updated to use currentProject) ---
+
         function updateTitleUI() {
-            document.getElementById('listTitleText').innerText = listTitle;
-            document.getElementById('listTitleInput').value = listTitle;
+            document.getElementById('listTitleText').innerText = currentProject.title;
+            document.getElementById('listTitleInput').value = currentProject.title;
         }
 
         function editTitle() {
@@ -302,10 +649,11 @@
 
         function saveTitle() {
             const newTitle = document.getElementById('listTitleInput').value.trim();
-            if (newTitle) {
-                listTitle = newTitle;
+            if (newTitle && newTitle !== currentProject.title) {
+                commitHistory("Renamed list");
+                currentProject.title = newTitle;
                 updateTitleUI();
-                saveToLocal();
+                saveCurrentProjectState();
             }
             cancelEditTitle();
         }
@@ -315,54 +663,24 @@
             document.getElementById('titleEditContainer').classList.add('hidden');
         }
 
-        function togglePrices() {
-            showPrices = !showPrices;
-            const btnText = document.getElementById('priceToggleText');
-            const btnIcon = document.querySelector('#priceToggleBtn i');
-            
-            if (showPrices) {
-                btnText.innerText = "Hide Prices";
-                btnIcon.className = "fa-solid fa-eye-slash";
-            } else {
-                btnText.innerText = "Show Prices";
-                btnIcon.className = "fa-solid fa-eye";
-            }
-            renderItems();
-        }
-
-        // --- Core Logic ---
-
         function cleanUrl(url) {
             try {
                 const urlObj = new URL(url);
                 const hostname = urlObj.hostname;
                 const path = urlObj.pathname;
 
-                // Amazon cleaning
                 if (hostname.includes('amazon')) {
                     const asinMatch = path.match(/\/(dp|gp\/product)\/([A-Z0-9]{10})/);
-                    if (asinMatch) {
-                        return `https://${hostname}/dp/${asinMatch[2]}`;
-                    }
+                    if (asinMatch) return `https://${hostname}/dp/${asinMatch[2]}`;
                 }
-
-                // AliExpress cleaning
                 if (hostname.includes('aliexpress')) {
-                    // Match /item/123456.html OR /item/123456 (optional .html)
                     const itemMatch = path.match(/\/item\/(\d+)(?:\.html)?/);
-                    if (itemMatch) {
-                        return `https://${hostname}/item/${itemMatch[1]}.html`;
-                    }
+                    if (itemMatch) return `https://${hostname}/item/${itemMatch[1]}.html`;
                 }
-
-                // eBay cleaning
                 if (hostname.includes('ebay')) {
                     const itmMatch = path.match(/\/itm\/(?:.*\/)?(\d+)/);
-                    if (itmMatch) {
-                        return `https://${hostname}/itm/${itmMatch[1]}`;
-                    }
+                    if (itmMatch) return `https://${hostname}/itm/${itmMatch[1]}`;
                 }
-
                 return urlObj.origin + urlObj.pathname;
             } catch (e) {
                 return url;
@@ -370,20 +688,13 @@
         }
 
         function isValidUrl(string) {
-            try {
-                new URL(string);
-                return true;
-            } catch (_) {
-                return false;  
-            }
+            try { new URL(string); return true; } catch (_) { return false; }
         }
 
-        // Helper to extract ASIN from Amazon URL
         function getAmazonAsin(url) {
             try {
                 const urlObj = new URL(url);
                 if (urlObj.hostname.includes('amazon') || urlObj.hostname.includes('amzn')) {
-                    // Match /dp/ASIN, /gp/product/ASIN, or /ASIN/
                     const match = urlObj.pathname.match(/\/(dp|gp\/product|exec\/obidos\/asin)\/([A-Z0-9]{10})/);
                     if (match) {
                         console.log(`[Amazon Debug] Found ASIN: ${match[2]}`);
@@ -392,134 +703,154 @@
                         console.log(`[Amazon Debug] No ASIN found in path: ${urlObj.pathname}`);
                     }
                 }
-            } catch (e) {
-                return null;
-            }
+            } catch (e) { return null; }
             return null;
         }
 
-        // Helper to extract a readable title from the URL text itself
+        function capitalizeWords(str) {
+            return str.replace(/\b\w/g, l => l.toUpperCase());
+        }
+
         function inferTitleFromUrl(url) {
             try {
                 const urlObj = new URL(url);
                 const path = urlObj.pathname;
                 let slug = "";
-
                 if (urlObj.hostname.includes('amazon')) {
                     const match = path.match(/^\/([^\/]+)\/(dp|gp\/product)/);
-                    if (match && match[1] !== 'dp' && match[1] !== 'gp') {
-                        slug = match[1];
-                    }
-                }
-                else if (urlObj.hostname.includes('ebay')) {
+                    if (match && match[1] !== 'dp') slug = match[1];
+                } else if (urlObj.hostname.includes('ebay')) {
                     const match = path.match(/\/itm\/([^\/]+)\/\d+/);
                     if (match) slug = match[1];
                 }
-
                 if (slug) {
-                    return decodeURIComponent(slug).replace(/[-_]/g, ' ');
+                    const raw = decodeURIComponent(slug).replace(/[-_]/g, ' ');
+                    return capitalizeWords(raw);
                 }
-            } catch (e) {
-                return "";
-            }
+            } catch (e) { return ""; }
             return "";
         }
 
-        // NEW: AliExpress Regex Hunter
         function findAliExpressImageInText(text) {
             const regex = /(https?:\/\/[^\s"']+\.alicdn\.com\/kf\/[^\s"']+\.(?:jpg|png))/i;
             const match = text.match(regex);
             return match ? match[1] : null;
         }
 
-        // Dedicated Metadata Fetcher with Simple Strategy
+        function findAmazonImageInText(text) {
+            // Hunter for Amazon images in raw HTML
+            const regex = /"large":"(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+\.jpg)"/;
+            const match = text.match(regex);
+            if (match) return match[1];
+            
+            // Backup: old hires
+            const regex2 = /data-old-hires="(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+\.jpg)"/;
+            const match2 = text.match(regex2);
+            return match2 ? match2[1] : null;
+        }
+
+        function findAmazonTitleInText(text) {
+            const regex = /<span id="productTitle"[^>]*>\s*([^<]+)\s*<\/span>/;
+            const match = text.match(regex);
+            return match ? match[1].trim() : null;
+        }
+
+        // Helper: Validate if an image URL is actually a 1x1 pixel or broken (Amazon Specific)
+        function validateImage(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Amazon 1x1 pixel check or generic broken images
+                    if (img.naturalWidth <= 1 || img.naturalHeight <= 1) resolve(false);
+                    else resolve(true);
+                };
+                img.onerror = () => resolve(false);
+                img.src = url;
+            });
+        }
+
         async function fetchMetadata(url, rawInputUrl, forceScreenshot = false) {
             let result = { title: "", image: "", description: "" };
             let success = false;
 
             console.log(`[Metadata] Starting fetch for: ${url}`);
 
-            // PREPARATION: Create a "Scraping Safe" URL
             let scrapeUrl = url;
             let isAliExpress = false;
-            
+            let isAmazon = false;
+
             if (url.includes('aliexpress')) {
                 isAliExpress = true;
-                // Trick: Use mobile site (.com) for lighter HTML and less blocking
-                // FIX: Use URL object to cleanly swap hostname without duplicate replacements
                 try {
                     const u = new URL(url);
-                    // Just set hostname to mobile site
                     u.hostname = 'm.aliexpress.com';
                     scrapeUrl = u.toString();
                 } catch (e) {
-                    // Fallback safe replace
                     scrapeUrl = url.replace(/https?:\/\/(www\.)?aliexpress\.(us|com)/, 'https://m.aliexpress.com');
                 }
             }
-
-            // PRE-CALCULATE: Amazon Image High Priority
-            let amazonAsin = getAmazonAsin(url);
-            if (!forceScreenshot && amazonAsin) {
-                console.log(`[Amazon Debug] Pre-setting Amazon Image for ASIN: ${amazonAsin}`);
-                // Use legacy SSL endpoint which is reliable
-                result.image = `https://images-na.ssl-images-amazon.com/images/P/${amazonAsin}.01.L.jpg`;
+            
+            if (url.includes('amazon') || url.includes('amzn')) {
+                isAmazon = true;
             }
 
-            // Strategy 1: Microlink (Primary Metadata API)
+            // Amazon Pre-Calculation (Legacy Method)
+            let amazonAsin = getAmazonAsin(url);
+            if (!forceScreenshot && amazonAsin) {
+                const candidate = `https://images-na.ssl-images-amazon.com/images/P/${amazonAsin}.01.L.jpg`;
+                console.log(`[Amazon Debug] Testing Legacy Image: ${candidate}`);
+                const isValid = await validateImage(candidate);
+                if (isValid) {
+                    console.log(`[Amazon Debug] Image Validated.`);
+                    result.image = candidate;
+                } else {
+                    console.log(`[Amazon Debug] Image rejected (1x1 pixel or 404).`);
+                }
+            }
+
+            // Strategy 1: Microlink
             if (!result.image || isAliExpress) { 
                 try {
                     console.log(`[Metadata] Strategy 1: Microlink for ${scrapeUrl}`);
                     let apiUrl = `https://api.microlink.io?url=${encodeURIComponent(scrapeUrl)}`;
-                    
-                    if (forceScreenshot) {
-                        apiUrl += '&screenshot=true&meta=false&overlay.browser=dark'; 
-                    } else {
-                        apiUrl += '&meta=true';
-                    }
+                    if (forceScreenshot) apiUrl += '&screenshot=true&meta=false&overlay.browser=dark'; 
+                    else apiUrl += '&meta=true';
 
                     const response = await fetch(apiUrl);
                     const json = await response.json();
 
                     if (json.status === 'success') {
                         const data = json.data;
-                        
                         if (!forceScreenshot) {
-                            if (data.title && !data.title.includes("Amazon.com") && !data.title.includes("Page Not Found")) {
-                                result.title = data.title;
-                            }
-                            
-                            // Update resolved URL if we were redirected
+                            if (data.title && !data.title.includes("Amazon.com") && !data.title.includes("Page Not Found")) result.title = data.title;
                             if (!amazonAsin && data.url) {
                                 amazonAsin = getAmazonAsin(data.url);
                                 if (amazonAsin) {
-                                    result.image = `https://images-na.ssl-images-amazon.com/images/P/${amazonAsin}.01.L.jpg`;
+                                    console.log(`[Amazon Debug] Found ASIN in resolved URL: ${amazonAsin}`);
+                                    // Re-run validation for resolved URL ASIN
+                                    const candidate = `https://images-na.ssl-images-amazon.com/images/P/${amazonAsin}.01.L.jpg`;
+                                    const isValid = await validateImage(candidate);
+                                    if (isValid) result.image = candidate;
                                 }
                             }
-
-                            // If we don't have an Amazon image, use the Microlink one
-                            if (!result.image) { 
+                            if (!result.image) {
                                 result.image = data.image?.url || "";
+                                console.log(`[Metadata] Using Microlink image: ${result.image}`);
+                            } else {
+                                console.log(`[Metadata] Keeping existing (Amazon) image, ignoring Microlink image: ${data.image?.url}`);
                             }
-                            
                             result.description = data.description || "";
                         } else {
-                            if (data.screenshot?.url) {
-                                result.image = data.screenshot.url;
-                                success = true;
-                            }
+                            if (data.screenshot?.url) { result.image = data.screenshot.url; success = true; }
                         }
-                        
-                        if (!forceScreenshot && (result.title || result.image)) {
-                            success = true;
-                        }
+                        if (!forceScreenshot && (result.title || result.image)) success = true;
                     }
                 } catch (e) {
                     console.warn("Microlink failed", e);
                 }
             }
 
-            // Strategy 2: LinkPreview.net (Fallback 1)
+            // Strategy 2: LinkPreview
             if ((!success || !result.title || !result.image) && !forceScreenshot && !isAliExpress) {
                 console.log(`[Metadata] Strategy 2: LinkPreview.net`);
                 try {
@@ -531,20 +862,19 @@
                         if (!result.description) result.description = data.description || "";
                         if (result.title || result.image) success = true;
                     }
-                } catch (e) { /* ignore */ }
+                } catch (e) {}
             }
 
-            // Strategy 3: AllOrigins (Proxy) + Regex Hunting (Special for AliExpress)
-            if ((!success || (isAliExpress && !result.image)) && !forceScreenshot) {
+            // Strategy 3: AllOrigins + Regex Hunters (AliExpress & Amazon)
+            if ((!success || (isAliExpress && !result.image) || isAmazon) && !forceScreenshot) {
                 console.log(`[Metadata] Strategy 3: AllOrigins + Regex Hunter for ${scrapeUrl}`);
                 try {
                     const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(scrapeUrl)}`);
                     const data = await response.json();
-                    
                     if (data.contents) {
                         const rawHtml = data.contents;
                         
-                        // 3a. Ali Express Magic: Regex Hunt for Image
+                        // AliExpress Magic
                         if (isAliExpress && !result.image) {
                             const aliImage = findAliExpressImageInText(rawHtml);
                             if (aliImage) {
@@ -552,42 +882,56 @@
                                 result.image = aliImage;
                             }
                         }
+                        
+                        // Amazon Deep Search (Override legacy image if better one found)
+                        if (isAmazon) {
+                            const amznImage = findAmazonImageInText(rawHtml);
+                            if (amznImage) {
+                                console.log(`[Amazon Magic] Found high-res image in HTML: ${amznImage}`);
+                                result.image = amznImage; // Upgrade to the real image found in source
+                            }
+                            
+                            const amznTitle = findAmazonTitleInText(rawHtml);
+                            if (amznTitle) {
+                                console.log(`[Amazon Magic] Found title in HTML: ${amznTitle}`);
+                                result.title = amznTitle;
+                            }
+                        }
 
-                        // 3b. Standard OpenGraph parsing
+                        // Standard OpenGraph
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(rawHtml, "text/html");
-                        
-                        const getMeta = (prop) => doc.querySelector(`meta[property="${prop}"]`)?.content || 
-                                                  doc.querySelector(`meta[name="${prop}"]`)?.content || "";
-                        
+                        const getMeta = (prop) => doc.querySelector(`meta[property="${prop}"]`)?.content || doc.querySelector(`meta[name="${prop}"]`)?.content || "";
                         if (!result.title) result.title = getMeta("og:title") || doc.title || "";
                         if (!result.image) result.image = getMeta("og:image") || "";
-                        
-                        // Clean AliExpress Title
-                        if (result.title && result.title.includes(" | AliExpress")) {
-                            result.title = result.title.split(" | AliExpress")[0];
-                        }
+                        if (result.title && result.title.includes(" | AliExpress")) result.title = result.title.split(" | AliExpress")[0];
                     }
                 } catch (e) {
                     console.warn("AllOrigins fallback failed", e);
                 }
             }
 
-            // Strategy 4: Amazon Late-Bind (Just in case)
+            // Strategy 4: Amazon Specific Heuristics (Last resort check)
             if (!result.image && !forceScreenshot) {
                 const asin = getAmazonAsin(url);
                 if (asin) {
-                    result.image = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.L.jpg`;
+                    const candidate = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.L.jpg`;
+                    const isValid = await validateImage(candidate);
+                    if (isValid) {
+                        console.log(`[Amazon Debug] Late-bind legacy image valid: ${candidate}`);
+                        result.image = candidate;
+                    }
                 }
             }
 
-            // Strategy 5: Title Fallback via URL
+            // Strategy 5: Title Fallback via URL Slug
             if (!result.title || result.title === "Amazon.com" || result.title.includes("Page Not Found")) {
+                console.log("[Metadata] Triggering Title Inference from URL");
                 const inferredTitle = inferTitleFromUrl(rawInputUrl || url);
                 if (inferredTitle) result.title = inferredTitle; 
             }
 
-            // Final Fallback: Thum.io
+            // Final Fallback - Auto Screenshot (Thum.io)
             if (!result.image && !forceScreenshot) {
                 console.log("[Metadata] Triggering Final Fallback: Auto-Screenshot (Thum.io)");
                 let thumUrl = url;
@@ -600,11 +944,9 @@
                  try {
                      const hostname = new URL(url).hostname.replace('www.', '');
                      result.title = `Item from ${hostname}`;
-                } catch(e) {
-                    result.title = "Unknown Item";
-                }
+                } catch(e) { result.title = "Unknown Item"; }
             }
-
+            
             console.log(`[Metadata] Final Result:`, result);
             return result;
         }
@@ -612,17 +954,15 @@
         async function processUrl() {
             const input = document.getElementById('urlInput');
             const rawUrl = input.value.trim();
-
             if (!rawUrl) return;
-
-            if (!isValidUrl(rawUrl)) {
-                alert("Please enter a valid URL starting with http:// or https://");
-                return;
-            }
+            if (!isValidUrl(rawUrl)) { alert("Please enter a valid URL"); return; }
 
             const url = cleanUrl(rawUrl);
             const tempId = Date.now();
 
+            commitHistory("Added item");
+
+            // Add Placeholder
             const newItem = {
                 id: tempId,
                 url: url,
@@ -633,149 +973,92 @@
                 loading: true,
                 error: false
             };
-            
-            items.push(newItem);
-            renderItems();
-            saveToLocal();
+            currentProject.items.push(newItem);
+            saveCurrentProjectState();
+            refreshUI();
 
             input.value = '';
             input.focus();
 
             try {
                 const data = await fetchMetadata(url, rawUrl, false);
-
                 let extractedPrice = null;
                 const priceRegex = /(\$|USD|€|£)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i;
                 const textToScan = (data.title + " " + data.description);
                 const priceMatch = textToScan.match(priceRegex);
-                
-                if (priceMatch) {
-                    let priceStr = priceMatch[2].replace(/,/g, ''); 
-                    extractedPrice = parseFloat(priceStr);
-                }
+                if (priceMatch) extractedPrice = parseFloat(priceMatch[2].replace(/,/g, ''));
 
-                const index = items.findIndex(i => i.id === tempId);
+                const index = currentProject.items.findIndex(i => i.id === tempId);
                 if (index !== -1) {
-                    items[index] = {
-                        ...items[index],
+                    currentProject.items[index] = {
+                        ...currentProject.items[index],
                         title: data.title,
                         price: extractedPrice,
                         image: data.image,
                         loading: false
                     };
                 }
-
             } catch (error) {
                 console.error("Fetch failed:", error);
-                const index = items.findIndex(i => i.id === tempId);
+                const index = currentProject.items.findIndex(i => i.id === tempId);
                 if (index !== -1) {
-                    items[index] = {
-                        ...items[index],
-                        title: "Link (Edit details)",
-                        price: null,
-                        image: "",
-                        loading: false,
-                        error: true
-                    };
+                    currentProject.items[index] = { ...currentProject.items[index], title: "Link (Edit details)", loading: false, error: true };
                 }
             }
-
-            renderItems();
-            saveToLocal();
+            saveCurrentProjectState();
+            refreshUI();
         }
 
-        // REDESIGNED: Force Screenshot with Fallbacks
         async function reloadItemWithScreenshot(id) {
-            const index = items.findIndex(i => i.id === id);
+            const index = currentProject.items.findIndex(i => i.id === id);
             if (index === -1) return;
 
-            const item = items[index];
-            items[index] = { ...item, loading: true };
-            renderItems();
+            commitHistory("Reloaded image (screenshot)");
+            const item = currentProject.items[index];
+            currentProject.items[index] = { ...item, loading: true };
+            refreshUI();
 
             let finalImage = "";
-
             try {
-                // Attempt 1: Microlink Screenshot
                 console.log("Triggering Manual Screenshot: Microlink");
                 const data = await fetchMetadata(item.url, "", true);
-                
-                if (data.image && data.image.startsWith('http')) {
-                    finalImage = data.image;
-                } else {
-                    throw new Error("Microlink Screenshot failed");
-                }
-
+                if (data.image && data.image.startsWith('http')) finalImage = data.image;
+                else throw new Error("Microlink Screenshot failed");
             } catch (e) {
                 console.warn("Microlink screenshot failed, switching to Thum.io fallback", e);
-                // Attempt 2: Thum.io (Very robust fallback)
                 console.log("Triggering Manual Screenshot Fallback: Thum.io");
                 let scrapeUrl = item.url;
-                if (scrapeUrl.includes('aliexpress.us')) {
-                    scrapeUrl = scrapeUrl.replace('aliexpress.us', 'aliexpress.com');
-                }
+                if (scrapeUrl.includes('aliexpress.us')) scrapeUrl = scrapeUrl.replace('aliexpress.us', 'aliexpress.com');
                 finalImage = `https://image.thum.io/get/width/1024/crop/800/noanimate/${encodeURIComponent(scrapeUrl)}`;
             }
             
-            // Update
-            items[index] = {
-                ...items[index],
-                // Only update image, keep title
-                image: finalImage,
-                loading: false
-            };
-            
-            renderItems();
-            saveToLocal();
-        }
-
-        function saveToLocal() {
-            localStorage.setItem('shoppingListItems', JSON.stringify(items));
-            localStorage.setItem('shoppingListTitle', listTitle);
+            currentProject.items[index] = { ...currentProject.items[index], image: finalImage, loading: false };
+            saveCurrentProjectState();
+            refreshUI();
         }
 
         function removeItem(id) {
-            items = items.filter(item => item.id !== id);
-            renderItems();
-            saveToLocal();
+            commitHistory("Removed item");
+            currentProject.items = currentProject.items.filter(item => item.id !== id);
+            saveCurrentProjectState();
+            refreshUI();
         }
 
         function clearList() {
-            if(confirm("Are you sure you want to clear the list?")) {
-                items = [];
-                renderItems();
-                saveToLocal();
-            }
+            showConfirm("Clear List?", "This will remove all items from the current list. You can undo this later.", () => {
+                commitHistory("Cleared list");
+                currentProject.items = [];
+                saveCurrentProjectState();
+                refreshUI();
+            });
         }
 
         function shareList() {
-            // 1. Minify Data
-            // Map items to a minimal array to save space
-            const minimalItems = items.map(i => ({
-                i: i.id,
-                u: i.url,
-                t: i.title,
-                p: i.price,
-                m: i.image
+            // Share only current project data
+            const cleanItems = currentProject.items.map(i => ({
+                id: i.id, url: i.url, title: i.title, price: i.price, image: i.image, imageFit: i.imageFit
             }));
-
-            // Structure to share: { title, items }
-            // Note: We use short keys here but for now standard keys are safer for LZString to not break logic unless we refactor load
-            // Let's stick to standard keys for compatibility but remove loading/error states
-            const cleanItems = items.map(i => ({
-                id: i.id,
-                url: i.url,
-                title: i.title,
-                price: i.price,
-                image: i.image,
-                imageFit: i.imageFit
-            }));
-
-            const shareObj = {
-                title: listTitle,
-                items: cleanItems
-            };
-
+            const shareObj = { title: currentProject.title, items: cleanItems };
             const jsonStr = JSON.stringify(shareObj);
             const compressed = LZString.compressToEncodedURIComponent(jsonStr);
             const newUrl = `${window.location.origin}${window.location.pathname}?data=${compressed}`;
@@ -784,206 +1067,75 @@
             textArea.value = newUrl;
             document.body.appendChild(textArea);
             textArea.select();
-            
             try {
-                const successful = document.execCommand('copy');
+                document.execCommand('copy');
                 const msg = document.getElementById('shareMessage');
-                msg.innerText = successful ? "Link copied to clipboard!" : "Could not copy link.";
                 msg.classList.remove('hidden');
                 setTimeout(() => msg.classList.add('hidden'), 3000);
-            } catch (err) {
-                console.error('Fallback: Oops, unable to copy', err);
-            }
-            
+            } catch (err) {}
             document.body.removeChild(textArea);
         }
 
-
-        // --- Rendering ---
-
-        function renderItems() {
-            const container = document.getElementById('list-container');
-            const emptyState = document.getElementById('empty-state');
-            const countEl = document.getElementById('itemCount');
-
-            container.innerHTML = '';
-            
-            if (items.length === 0) {
-                container.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                countEl.innerText = '0';
-                return;
-            }
-
-            container.classList.remove('hidden');
-            emptyState.classList.add('hidden');
-            countEl.innerText = items.length;
-
-            items.forEach(item => {
-                const isPriceUnknown = item.price === null || item.price === undefined;
-                const priceDisplay = isPriceUnknown ? '$-.--' : '$' + parseFloat(item.price).toFixed(2);
-                const imageFit = item.imageFit || 'object-cover';
-                
-                // Determine domain for badge
-                let domain = "Link";
-                if(item.url.includes("amazon")) domain = "Amazon";
-                else if(item.url.includes("aliexpress")) domain = "AliExpress";
-                else if(item.url.includes("ebay")) domain = "eBay";
-
-                // Image Logic
-                let imgContent = '';
-                if (item.loading) {
-                    imgContent = `<div class="w-full h-60 skeleton"></div>`;
-                } else if (item.image) {
-                    imgContent = `<img src="${item.image}" class="w-full h-60 ${imageFit} bg-white transition duration-500" onerror="this.src='https://placehold.co/400x300?text=No+Image'">`;
-                } else {
-                    imgContent = `<div class="w-full h-60 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>`;
-                }
-
-                const card = document.createElement('div');
-                card.className = "item-card bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition group relative flex flex-col";
-                card.dataset.id = item.id;
-                
-                let contentHtml = '';
-                
-                // Visibility Logic for Price
-                // If showPrices is false, we don't render the span at all, allowing buttons to flow naturally or use ml-auto
-                let footerContent = '';
-                
-                if (showPrices) {
-                    footerContent = `
-                        <span class="text-xl font-bold ${isPriceUnknown ? 'text-slate-400' : 'text-emerald-600'}">
-                            ${priceDisplay}
-                        </span>
-                        <div class="flex gap-2 ml-auto">
-                            <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="reloadItemWithScreenshot(${item.id})" class="text-slate-400 hover:text-purple-600 transition p-1" title="Reload with Screenshot"><i class="fa-solid fa-camera"></i></button>
-                            <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    `;
-                } else {
-                     // Prices Hidden: Just buttons on the right
-                    footerContent = `
-                        <div class="flex gap-2 ml-auto">
-                            <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
-                            <button onclick="reloadItemWithScreenshot(${item.id})" class="text-slate-400 hover:text-purple-600 transition p-1" title="Reload with Screenshot"><i class="fa-solid fa-camera"></i></button>
-                            <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    `;
-                }
-
-                if (item.loading) {
-                    contentHtml = `
-                        <div class="relative overflow-hidden cursor-progress">
-                            ${imgContent}
-                        </div>
-                        <div class="p-4 flex flex-col flex-1 space-y-3">
-                            <div class="h-4 bg-slate-200 rounded w-3/4 skeleton"></div>
-                            <div class="h-4 bg-slate-200 rounded w-1/2 skeleton"></div>
-                        </div>
-                    `;
-                } else {
-                    contentHtml = `
-                        <a href="${item.url}" target="_blank" class="block relative overflow-hidden bg-white">
-                            <span class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm z-10">${domain}</span>
-                            ${imgContent}
-                        </a>
-                        <div class="p-4 flex flex-col flex-1">
-                            <a href="${item.url}" target="_blank" class="text-slate-800 font-semibold leading-tight hover:text-blue-600 transition mb-2 line-clamp-2" title="${item.title}">
-                                ${item.title}
-                            </a>
-                            <div class="mt-auto flex items-center pt-3 border-t border-slate-100">
-                                ${footerContent}
-                            </div>
-                        </div>
-                    `;
-                }
-
-                card.innerHTML = contentHtml;
-                container.appendChild(card);
-            });
-        }
-
-        // --- Modal Logic ---
-
+        // --- Modal Actions ---
         const modal = document.getElementById('itemModal');
-
         function openModal(data) {
             document.getElementById('modalId').value = data.id;
             document.getElementById('modalOriginalUrl').value = data.url;
             document.getElementById('modalTitle').value = data.title;
-            // If price is null, show empty string, otherwise value
             document.getElementById('modalPrice').value = (data.price === null || data.price === undefined) ? '' : data.price;
             document.getElementById('modalImage').value = data.image || '';
             document.getElementById('modalImageFit').value = data.imageFit || 'object-cover';
-
             modal.classList.remove('hidden');
         }
-
-        function closeModal() {
-            modal.classList.add('hidden');
-        }
-
+        function closeModal() { modal.classList.add('hidden'); }
         function editItem(id) {
-            const item = items.find(i => i.id === id);
+            const item = currentProject.items.find(i => i.id === id);
             if (item) openModal(item);
         }
-
         function saveModalItem() {
             const id = parseInt(document.getElementById('modalId').value);
             const title = document.getElementById('modalTitle').value;
             const priceInput = document.getElementById('modalPrice').value;
             const image = document.getElementById('modalImage').value;
             const imageFit = document.getElementById('modalImageFit').value;
-
-            // Allow price to be empty (null)
             const price = priceInput === '' ? null : parseFloat(priceInput);
 
-            const index = items.findIndex(i => i.id === id);
+            const index = currentProject.items.findIndex(i => i.id === id);
             if (index !== -1) {
-                items[index] = {
-                    ...items[index],
-                    title: title || "Unknown Item",
-                    price: price,
-                    image: image,
-                    imageFit: imageFit
-                };
-                renderItems();
-                saveToLocal();
+                // Check for changes for history
+                const oldItem = currentProject.items[index];
+                if(oldItem.title !== title || oldItem.price !== price || oldItem.image !== image) {
+                    commitHistory("Edited item details");
+                    currentProject.items[index] = { ...oldItem, title, price, image, imageFit };
+                    saveCurrentProjectState();
+                    refreshUI();
+                }
             }
             closeModal();
         }
-
-        // --- PDF Generation ---
 
         function downloadPDF() {
             const element = document.body;
             const inputSection = document.getElementById('input-section');
             const nav = document.querySelector('nav');
             const priceToggleBtn = document.getElementById('priceToggleBtn');
-            const editTitleBtn = document.querySelector('button[title="Rename List"]'); // Get edit icon
-
-            // Temporary Style Changes for PDF
+            const editTitleBtn = document.querySelector('button[title="Rename List"]');
             inputSection.classList.add('pdf-hide');
             nav.classList.add('pdf-hide');
             priceToggleBtn.classList.add('pdf-hide');
-            if(editTitleBtn) editTitleBtn.classList.add('pdf-hide'); // Hide edit icon
-            
-            // Hide delete/edit buttons inside cards
+            if(editTitleBtn) editTitleBtn.classList.add('pdf-hide');
             const actionButtons = document.querySelectorAll('.fa-trash, .fa-pen-to-square, .fa-camera');
             actionButtons.forEach(el => el.parentElement.style.display = 'none');
 
-            // Generate
             const opt = {
-                margin:       [10, 10],
-                filename:     listTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf', // Use list title for filename
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true, logging: false },
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                margin: [10, 10],
+                filename: currentProject.title.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, logging: false },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             html2pdf().set(opt).from(element).save().then(() => {
-                // Restore UI
                 inputSection.classList.remove('pdf-hide');
                 nav.classList.remove('pdf-hide');
                 priceToggleBtn.classList.remove('pdf-hide');
@@ -992,6 +1144,94 @@
             });
         }
 
+        function togglePrices() {
+            showPrices = !showPrices;
+            const btnText = document.getElementById('priceToggleText');
+            const btnIcon = document.querySelector('#priceToggleBtn i');
+            if (showPrices) {
+                btnText.innerText = "Hide Prices";
+                btnIcon.className = "fa-solid fa-eye-slash";
+            } else {
+                btnText.innerText = "Show Prices";
+                btnIcon.className = "fa-solid fa-eye";
+            }
+            renderItems();
+        }
+
+        function renderItems() {
+            const container = document.getElementById('list-container');
+            const emptyState = document.getElementById('empty-state');
+            const countEl = document.getElementById('itemCount');
+            
+            container.innerHTML = '';
+            
+            if (currentProject.items.length === 0) {
+                container.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                countEl.innerText = '0';
+                return;
+            }
+
+            container.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            countEl.innerText = currentProject.items.length;
+
+            currentProject.items.forEach(item => {
+                const isPriceUnknown = item.price === null || item.price === undefined;
+                const priceDisplay = isPriceUnknown ? '$-.--' : '$' + parseFloat(item.price).toFixed(2);
+                const imageFit = item.imageFit || 'object-cover';
+                let domain = "Link";
+                if(item.url.includes("amazon")) domain = "Amazon";
+                else if(item.url.includes("aliexpress")) domain = "AliExpress";
+                else if(item.url.includes("ebay")) domain = "eBay";
+
+                let imgContent = '';
+                // Add smarter onerror to auto-swap to screenshot on failure
+                const onErrorLogic = `this.onerror=null; this.src='https://image.thum.io/get/width/400/crop/800/noanimate/${encodeURIComponent(item.url)}'`;
+
+                if (item.loading) imgContent = `<div class="w-full h-60 skeleton"></div>`;
+                else if (item.image) imgContent = `<img src="${item.image}" class="w-full h-60 ${imageFit} bg-white transition duration-500" onerror="${onErrorLogic}">`;
+                else imgContent = `<div class="w-full h-60 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>`;
+
+                const card = document.createElement('div');
+                card.className = "item-card bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition group relative flex flex-col";
+                card.dataset.id = item.id;
+                
+                let footerContent = '';
+                if (showPrices) {
+                    footerContent = `
+                        <span class="text-xl font-bold ${isPriceUnknown ? 'text-slate-400' : 'text-emerald-600'}">${priceDisplay}</span>
+                        <div class="flex gap-2 ml-auto">
+                            <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="reloadItemWithScreenshot(${item.id})" class="text-slate-400 hover:text-purple-600 transition p-1" title="Reload with Screenshot"><i class="fa-solid fa-camera"></i></button>
+                            <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
+                        </div>`;
+                } else {
+                    footerContent = `
+                        <div class="flex gap-2 ml-auto">
+                            <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="reloadItemWithScreenshot(${item.id})" class="text-slate-400 hover:text-purple-600 transition p-1" title="Reload with Screenshot"><i class="fa-solid fa-camera"></i></button>
+                            <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
+                        </div>`;
+                }
+
+                card.innerHTML = item.loading ? `
+                    <div class="relative overflow-hidden cursor-progress">${imgContent}</div>
+                    <div class="p-4 flex flex-col flex-1 space-y-3">
+                        <div class="h-4 bg-slate-200 rounded w-3/4 skeleton"></div>
+                        <div class="h-4 bg-slate-200 rounded w-1/2 skeleton"></div>
+                    </div>` : `
+                    <a href="${item.url}" target="_blank" class="block relative overflow-hidden bg-white">
+                        <span class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm z-10">${domain}</span>
+                        ${imgContent}
+                    </a>
+                    <div class="p-4 flex flex-col flex-1">
+                        <a href="${item.url}" target="_blank" class="text-slate-800 font-semibold leading-tight hover:text-blue-600 transition mb-2 line-clamp-2" title="${item.title}">${item.title}</a>
+                        <div class="mt-auto flex items-center pt-3 border-t border-slate-100">${footerContent}</div>
+                    </div>`;
+                container.appendChild(card);
+            });
+        }
     </script>
 </body>
 </html>
