@@ -2,29 +2,110 @@
 <html>
 <head>
     <style>
-        body { width: 320px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 0; margin: 0; background: #f8fafc; }
-        .header { background: #ffffff; padding: 15px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-        .header h1 { margin: 0; font-size: 16px; color: #1e293b; }
-        .content { padding: 15px; max-height: 400px; overflow-y: auto; }
-        .item { background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 10px; display: flex; gap: 10px; align-items: center; }
-        .item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #f1f5f9; }
-        .item-details { flex: 1; overflow: hidden; }
-        .item-title { font-size: 12px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .item-price { font-size: 12px; color: #059669; font-weight: bold; }
-        .actions { display: flex; gap: 10px; padding: 15px; background: white; border-top: 1px solid #e2e8f0; }
-        .btn { flex: 1; padding: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; text-align: center; text-decoration: none; }
-        .btn-primary { background: #2563eb; color: white; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-danger { background: #fee2e2; color: #ef4444; }
-        .btn-danger:hover { background: #fecaca; }
-        .empty-state { text-align: center; color: #94a3b8; padding: 30px 0; font-size: 13px; }
-        .delete-btn { background: none; border: none; color: #cbd5e1; cursor: pointer; font-size: 14px; }
-        .delete-btn:hover { color: #ef4444; }
+        body { 
+            width: 340px; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            padding: 0; 
+            margin: 0; 
+            background: #f8fafc; 
+            color: #334155;
+        }
+        
+        /* Smooth UI Header */
+        .header { 
+            background: white; 
+            padding: 16px 20px; 
+            border-bottom: 1px solid #f1f5f9; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .header h1 { margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; }
+        .badge {
+            background: #eff6ff; color: #2563eb; 
+            padding: 2px 8px; border-radius: 12px; 
+            font-size: 12px; font-weight: 600;
+        }
+
+        .content { padding: 16px; max-height: 400px; overflow-y: auto; }
+        
+        /* Card Style */
+        .item { 
+            background: white; 
+            padding: 12px; 
+            border-radius: 12px; /* Smooth corners */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #f1f5f9; 
+            margin-bottom: 12px; 
+            display: flex; 
+            gap: 12px; 
+            align-items: center; 
+            transition: transform 0.1s;
+        }
+        .item:hover { border-color: #e2e8f0; }
+
+        .item img { 
+            width: 48px; height: 48px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            background: #f8fafc; 
+        }
+        
+        .item-details { flex: 1; overflow: hidden; min-width: 0; }
+        .item-title { 
+            font-size: 13px; font-weight: 600; color: #1e293b; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            margin-bottom: 2px;
+        }
+        .item-price { font-size: 13px; color: #10b981; font-weight: 700; }
+        
+        /* Actions */
+        .actions { 
+            padding: 16px; 
+            background: white; 
+            border-top: 1px solid #f1f5f9; 
+            display: flex; gap: 10px;
+        }
+        .btn { 
+            flex: 1; padding: 10px; 
+            border: none; border-radius: 10px; 
+            cursor: pointer; font-weight: 600; font-size: 13px; 
+            text-align: center; text-decoration: none; 
+            transition: all 0.2s;
+        }
+        .btn-primary { 
+            background: #2563eb; color: white; 
+            box-shadow: 0 2px 5px rgba(37, 99, 235, 0.2);
+        }
+        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+        
+        .btn-danger { 
+            background: #fef2f2; color: #ef4444; 
+            max-width: 80px;
+        }
+        .btn-danger:hover { background: #fee2e2; color: #dc2626; }
+
+        .empty-state { 
+            text-align: center; color: #94a3b8; 
+            padding: 40px 20px; font-size: 13px; line-height: 1.5;
+        }
+        
+        /* SVG Delete Button */
+        .delete-btn { 
+            background: transparent; border: none; 
+            color: #94a3b8; cursor: pointer; 
+            padding: 4px; border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .delete-btn:hover { background: #fef2f2; color: #ef4444; }
+        .delete-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Clipped Items (<span id="count">0</span>)</h1>
+        <h1>Clipped Items</h1>
+        <span class="badge" id="count">0</span>
     </div>
     <div class="content" id="list">
         <!-- Items injected here -->
@@ -33,7 +114,6 @@
         <button class="btn btn-danger" id="clearBtn">Clear</button>
         <a href="https://theultimateabsol.github.io/shoplisttracker/" target="_blank" class="btn btn-primary">Go to List</a>
     </div>
-    <!-- Reference external script to satisfy CSP -->
     <script src="popup.js"></script>
 </body>
 </html>
