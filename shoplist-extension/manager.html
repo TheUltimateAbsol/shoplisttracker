@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ShopList Manager</title>
+
+    <!-- Local Libraries -->
+    <script src="lib/tailwindcss.js"></script> 
+    <link href="lib/fontawesome/css/all.min.css" rel="stylesheet">
+    <script src="lib/html2pdf.bundle.min.js"></script>
+    <script src="lib/Sortable.min.js"></script>
+    <script src="lib/lz-string.min.js"></script>
+
+    <style>
+        body { font-family: sans-serif; background-color: #f8fafc; margin: 0; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .pdf-hide { display: none !important; }
+        .sortable-ghost { opacity: 0.4; background: #f1f5f9; border: 2px dashed #cbd5e1; }
+        .selected-card { outline: 2px solid #2563eb; background-color: #eff6ff; }
+    </style>
+</head>
+<body class="text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="flex items-center gap-2">
+                    <div class="bg-blue-600 text-white p-2 rounded-lg"><i class="fa-solid fa-cart-shopping"></i></div>
+                    <h1 class="text-xl font-bold text-slate-800">ShopList<span class="text-blue-600">Manager</span></h1>
+                </div>
+                <button id="btnOpenProjects" class="text-slate-600 hover:text-blue-600 bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-semibold transition">
+                    <i class="fa-solid fa-folder-open mr-1"></i> Projects
+                </button>
+            </div>
+
+            <div class="flex gap-2 items-center flex-wrap justify-center">
+                <button id="btnInbox" class="hidden px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition shadow-sm flex items-center gap-2">
+                    <i class="fa-solid fa-inbox"></i> Import Clipped Items (<span id="inboxCount">0</span>)
+                </button>
+
+                <div class="flex bg-slate-100 p-1 rounded-lg mx-2">
+                    <button id="btnUndo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 rounded"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button id="btnRedo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 rounded"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+
+                <button id="btnDownloadPdf" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm transition"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6 border-b border-slate-200 pb-4 min-h-[48px]">
+            
+            <!-- Title Group -->
+            <div id="headerStandard" class="flex items-center gap-2 group">
+                <div id="titleDisplayContainer" class="flex items-center gap-2">
+                    <h2 class="text-2xl font-bold text-slate-800" id="projectTitleDisplay">My List</h2>
+                    <button id="btnEditTitle" class="text-slate-300 hover:text-blue-500 transition"><i class="fa-solid fa-pencil"></i></button>
+                </div>
+                <div id="titleEditContainer" class="hidden flex gap-2">
+                    <input type="text" id="projectTitleInput" class="border rounded px-2 py-1 text-sm">
+                    <button id="btnSaveTitle" class="text-emerald-600"><i class="fa-solid fa-check"></i></button>
+                </div>
+            </div>
+
+            <!-- Selection Toolbar (Hidden by default) -->
+            <div id="headerSelection" class="hidden flex items-center gap-2 w-full md:w-auto bg-blue-50 p-2 rounded-lg">
+                <span class="text-sm font-semibold text-blue-800 px-2"><span id="selectCount">0</span> Selected</span>
+                <div class="h-4 w-px bg-blue-200 mx-1"></div>
+                <button id="btnSelectAll" class="text-slate-600 text-sm font-medium px-2 hover:text-blue-600">Select All</button>
+                <button id="btnDeleteSelected" class="text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1 px-2"><i class="fa-solid fa-trash"></i> Delete</button>
+                <button id="btnCopySelected" class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1 px-2"><i class="fa-solid fa-copy"></i> Copy</button>
+                <div class="h-4 w-px bg-blue-200 mx-1"></div>
+                <button id="btnCloseSelection" class="text-slate-500 hover:text-slate-800 px-2"><i class="fa-solid fa-times"></i></button>
+            </div>
+
+            <!-- Right Controls -->
+            <div id="headerControls" class="flex gap-3 items-center ml-auto">
+                <span class="text-sm text-slate-500"><span id="itemCount">0</span> Items</span>
+                
+                <button id="btnEnterSelect" class="text-sm font-medium text-slate-600 hover:text-blue-600 px-3 py-1.5 rounded hover:bg-slate-100 border border-slate-200 transition">
+                    <i class="fa-regular fa-square-check mr-1"></i> Select Items
+                </button>
+
+                <div class="relative group">
+                    <button id="btnViewOptions" class="text-sm font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded hover:bg-slate-100 border border-slate-200">
+                        <i class="fa-solid fa-sliders mr-1"></i> View
+                    </button>
+                    <!-- Menu -->
+                    <div id="viewMenuDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 hidden z-50 p-2">
+                        <button data-cols="1" class="js-grid-size block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Large (1 Col)</button>
+                        <button data-cols="2" class="js-grid-size block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Medium (2 Cols)</button>
+                        <button data-cols="3" class="js-grid-size block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Small (3 Cols)</button>
+                        <div class="border-t my-1"></div>
+                        <button id="btnTogglePrices" class="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex justify-between">
+                            <span>Prices</span> <i id="checkPrice" class="fa-solid fa-check text-blue-600"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid -->
+        <div id="grid" class="grid gap-6 pb-20 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"></div>
+        
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-20">
+            <div class="inline-block p-6 bg-slate-100 rounded-full text-slate-400 mb-4"><i class="fa-solid fa-basket-shopping text-4xl"></i></div>
+            <h3 class="text-lg font-medium text-slate-600">List is empty</h3>
+            <p class="text-slate-500">Use the "Save Item" button on shopping sites to add items here.</p>
+        </div>
+
+    </main>
+
+    <!-- Projects Modal -->
+    <div id="projectsModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-slate-50 px-6 py-4 border-b flex justify-between items-center"><h3 class="font-bold">My Projects</h3><button class="js-close-modal" data-target="projectsModal">✕</button></div>
+            <ul id="projectsList" class="divide-y max-h-96 overflow-y-auto"></ul>
+            <div class="p-4 bg-slate-50 border-t"><button id="btnCreateProject" class="w-full bg-blue-600 text-white py-2 rounded-lg">New Project</button></div>
+        </div>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div id="editModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 class="font-bold mb-4">Edit Item</h3>
+            <input type="hidden" id="editId">
+            <div class="space-y-3">
+                <div><label class="text-xs font-bold text-slate-500">Name</label><input type="text" id="editTitle" class="w-full border rounded px-2 py-1"></div>
+                <div><label class="text-xs font-bold text-slate-500">Price</label><input type="number" id="editPrice" class="w-full border rounded px-2 py-1"></div>
+                <div><label class="text-xs font-bold text-slate-500">Image Fit</label><select id="editFit" class="w-full border rounded px-2 py-1 bg-white"><option value="object-cover">Cover</option><option value="object-contain">Contain</option></select></div>
+            </div>
+            
+            <button id="btnScreenshot" class="w-full mt-4 text-purple-600 border border-purple-200 bg-purple-50 hover:bg-purple-100 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                <i class="fa-solid fa-camera"></i> Replace Image with Screenshot
+            </button>
+
+            <div class="flex justify-end gap-2 mt-6">
+                <button class="js-close-modal text-slate-500 px-3" data-target="editModal">Cancel</button>
+                <button id="btnSaveEdit" class="bg-blue-600 text-white px-4 py-2 rounded">Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-black/50 z-[60] hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 text-center">
+            <div class="mb-4 text-yellow-500"><i class="fa-solid fa-triangle-exclamation text-4xl"></i></div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2" id="confirmTitle">Confirm</h3>
+            <p class="text-slate-600 mb-6" id="confirmMessage">Are you sure?</p>
+            <div class="flex gap-3 justify-center">
+                <button id="confirmCancelBtn" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
+                <button id="confirmYesBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="manager.js"></script>
+</body>
+</html>

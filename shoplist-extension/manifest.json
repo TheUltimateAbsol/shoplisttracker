@@ -1,46 +1,38 @@
 {
   "manifest_version": 3,
-  "name": "ShopList Clipper",
-  "version": "1.0",
-  "description": "Clip items from Amazon, eBay, and AliExpress to your ShopListTracker.",
+  "name": "ShopList Manager & Clipper",
+  "version": "2.2",
+  "description": "A complete, standalone shopping list manager. Clip items from the web and organize them locally.",
   "permissions": [
     "storage",
+    "unlimitedStorage", 
     "activeTab",
     "scripting"
   ],
   "host_permissions": [
-    "*://*.amazon.com/*",
-    "*://*.ebay.com/*",
-    "*://*.aliexpress.com/*",
-    "*://*.aliexpress.us/*",
-    "*://theultimateabsol.github.io/*",
-    "http://127.0.0.1:5500/*" 
+    "<all_urls>"
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icon.png",
-      "48": "icon.png",
-      "128": "icon.png"
-    }
+    "default_title": "Open ShopList Manager",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*.amazon.com/*",
-        "*://*.ebay.com/*",
-        "*://*.aliexpress.com/*",
-        "*://*.aliexpress.us/*",
-        "*://theultimateabsol.github.io/*",
-        "http://127.0.0.1:5500/*"
-      ],
+      "matches": ["<all_urls>"],
       "js": ["content.js"],
       "css": ["styles.css"]
     }
   ],
   "icons": {
-    "16": "icon.png",
-    "48": "icon.png",
     "128": "icon.png"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["manager.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

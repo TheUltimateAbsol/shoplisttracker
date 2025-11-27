@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <style>
         body { 
             width: 340px; 
@@ -11,7 +12,7 @@
             color: #334155;
         }
         
-        /* Smooth UI Header */
+        /* Header */
         .header { 
             background: white; 
             padding: 16px 20px; 
@@ -20,6 +21,9 @@
             justify-content: space-between; 
             align-items: center; 
             box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         .header h1 { margin: 0; font-size: 15px; font-weight: 700; color: #0f172a; }
         .badge {
@@ -28,13 +32,13 @@
             font-size: 12px; font-weight: 600;
         }
 
-        .content { padding: 16px; max-height: 400px; overflow-y: auto; }
+        .content { padding: 16px; max-height: 350px; overflow-y: auto; }
         
         /* Card Style */
         .item { 
             background: white; 
             padding: 12px; 
-            border-radius: 12px; /* Smooth corners */
+            border-radius: 12px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             border: 1px solid #f1f5f9; 
             margin-bottom: 12px; 
@@ -60,12 +64,14 @@
         }
         .item-price { font-size: 13px; color: #10b981; font-weight: 700; }
         
-        /* Actions */
+        /* Actions Footer */
         .actions { 
             padding: 16px; 
             background: white; 
             border-top: 1px solid #f1f5f9; 
             display: flex; gap: 10px;
+            position: sticky;
+            bottom: 0;
         }
         .btn { 
             flex: 1; padding: 10px; 
@@ -73,6 +79,7 @@
             cursor: pointer; font-weight: 600; font-size: 13px; 
             text-align: center; text-decoration: none; 
             transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
         }
         .btn-primary { 
             background: #2563eb; color: white; 
@@ -91,7 +98,7 @@
             padding: 40px 20px; font-size: 13px; line-height: 1.5;
         }
         
-        /* SVG Delete Button */
+        /* Delete Button */
         .delete-btn { 
             background: transparent; border: none; 
             color: #94a3b8; cursor: pointer; 
@@ -107,12 +114,18 @@
         <h1>Clipped Items</h1>
         <span class="badge" id="count">0</span>
     </div>
+    
     <div class="content" id="list">
         <!-- Items injected here -->
     </div>
+
     <div class="actions">
         <button class="btn btn-danger" id="clearBtn">Clear</button>
-        <a href="https://theultimateabsol.github.io/shoplisttracker/" target="_blank" class="btn btn-primary">Go to List</a>
+        <!-- Note: This button triggers JS to open the internal manager page -->
+        <button class="btn btn-primary" id="openManagerBtn">
+            <span>Open Manager</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+        </button>
     </div>
     <script src="popup.js"></script>
 </body>
