@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ShopList Manager & Clipper",
-  "version": "2.2",
+  "version": "2.4",
   "description": "A complete, standalone shopping list manager. Clip items from the web and organize them locally.",
   "permissions": [
     "storage",
@@ -10,7 +10,13 @@
     "scripting"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "*://*.amazon.com/*",
+    "*://*.amazon.co.uk/*",
+    "*://*.amazon.de/*",
+    "*://*.ebay.com/*",
+    "*://*.ebay.co.uk/*",
+    "*://*.aliexpress.com/*",
+    "*://*.aliexpress.us/*"
   ],
   "action": {
     "default_title": "Open ShopList Manager",
@@ -21,7 +27,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "*://*.amazon.com/*",
+        "*://*.amazon.co.uk/*",
+        "*://*.amazon.de/*",
+        "*://*.ebay.com/*",
+        "*://*.ebay.co.uk/*",
+        "*://*.aliexpress.com/*",
+        "*://*.aliexpress.us/*"
+      ],
       "js": ["content.js"],
       "css": ["styles.css"]
     }
@@ -31,7 +45,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["manager.html"],
+      "resources": ["manager.html", "print.html"],
       "matches": ["<all_urls>"]
     }
   ]

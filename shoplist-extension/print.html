@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Printing Shopping List...</title>
+    <script src="lib/tailwindcss.js"></script>
+    <link href="lib/fontawesome/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif;
+            background: #fff; 
+            margin: 0; 
+            padding: 20px; 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+        }
+        
+        /* Ensure grid items don't get cut in half */
+        .item-card { 
+            break-inside: avoid; 
+            page-break-inside: avoid;
+            background: white;
+            border: 1px solid #e2e8f0;
+        }
+        
+        /* Hide links in print (optional, depends on preference) */
+        a { text-decoration: none !important; color: inherit !important; }
+
+        @media print {
+            @page {
+                size: letter;
+                margin: 0.4in; /* Slightly tighter margins to fit more */
+            }
+            body { padding: 0; }
+            #status { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="print-area">
+        <div class="mb-4 border-b pb-2 flex justify-between items-end">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800" id="print-title">My List</h1>
+                <p class="text-xs text-slate-500 mt-1" id="print-meta">0 items</p>
+            </div>
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide">
+                ShopList Manager
+            </div>
+        </div>
+        
+        <!-- Grid Container -->
+        <div id="print-grid" class="grid gap-3">
+            <!-- Items injected here -->
+        </div>
+    </div>
+
+    <!-- Status Overlay (Hidden during print) -->
+    <div id="status" class="fixed top-0 left-0 w-full h-full bg-white flex flex-col gap-4 items-center justify-center z-50">
+        <div class="text-xl font-semibold text-slate-600 flex items-center gap-2">
+            <i class="fa-solid fa-print"></i> Generating Preview...
+        </div>
+        <div class="text-sm text-slate-400">Please wait while images load.</div>
+    </div>
+
+    <script src="print.js"></script>
+</body>
+</html>
