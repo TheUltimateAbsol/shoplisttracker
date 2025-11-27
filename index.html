@@ -4,11 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wishlist & Price Tracker</title>
+    
+    <!-- Favicon (Shopping Cart Emoji) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛒</text></svg>">
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- html2pdf.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- SortableJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+    <!-- LZ-String -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -22,6 +36,10 @@
         .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
         @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .sortable-ghost { opacity: 0.4; background: #f1f5f9; border: 2px dashed #cbd5e1; }
+        
+        /* Selection Styles */
+        .selected-card { ring-width: 2px; ring-color: #2563eb; background-color: #eff6ff; }
+        .selection-checkbox { transition: all 0.2s; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800">
@@ -29,29 +47,47 @@
     <!-- Navbar -->
     <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-40">
         <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            <!-- Left: Brand & Projects -->
             <div class="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
                 <div class="flex items-center gap-2">
                     <div class="bg-blue-600 text-white p-2 rounded-lg"><i class="fa-solid fa-cart-shopping"></i></div>
                     <h1 class="text-xl font-bold text-slate-800 hidden sm:block">ShopList<span class="text-blue-600">Tracker</span></h1>
                 </div>
+                
                 <div class="flex items-center gap-2 ml-2">
-                    <button onclick="openProjectsModal()" class="text-slate-600 hover:text-blue-600 transition flex items-center gap-2 text-sm font-semibold bg-slate-100 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-folder-open"></i> Projects</button>
-                    <button id="btnSaveProject" onclick="saveTransientProject()" class="hidden text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition flex items-center gap-2 text-sm font-semibold border border-emerald-200 px-3 py-1.5 rounded-lg animate-pulse"><i class="fa-solid fa-floppy-disk"></i> Save Project</button>
+                    <button onclick="openProjectsModal()" class="text-slate-600 hover:text-blue-600 transition flex items-center gap-2 text-sm font-semibold bg-slate-100 px-3 py-1.5 rounded-lg">
+                        <i class="fa-solid fa-folder-open"></i> Projects
+                    </button>
+                    
+                    <button id="btnSaveProject" onclick="saveTransientProject()" class="hidden text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition flex items-center gap-2 text-sm font-semibold border border-emerald-200 px-3 py-1.5 rounded-lg animate-pulse">
+                        <i class="fa-solid fa-floppy-disk"></i> Save Project
+                    </button>
                 </div>
             </div>
+            
+            <!-- Right: Actions -->
             <div class="flex gap-2 flex-wrap justify-center items-center">
-                <!-- Extension Button (Hidden until handshake) -->
-                <button id="btnExtensionPaste" onclick="pasteFromExtension()" class="hidden px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center gap-2 shadow-sm" title="Import saved items">
-                    <i class="fa-solid fa-paste"></i> Paste from Extension Clipboard (<span id="extCount">0</span>)
-                </button>
-
-                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg mx-2">
-                    <button onclick="undo()" id="btnUndo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 rounded" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
-                    <button onclick="redo()" id="btnRedo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 rounded" title="Redo"><i class="fa-solid fa-rotate-right"></i></button>
+                
+                <!-- Paste Buttons (Extension & Internal) -->
+                <div class="flex gap-2 mr-2 border-r border-slate-200 pr-2">
+                    <!-- Extension Paste -->
+                    <button id="btnExtensionPaste" onclick="pasteFromExtension()" class="hidden px-3 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center gap-2 shadow-sm" title="Import saved items">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> Extension (<span id="extCount">0</span>)
+                    </button>
+                    <!-- Internal Clipboard Paste -->
+                    <button id="btnInternalPaste" onclick="pasteInternal()" class="hidden px-3 py-2 text-sm rounded-lg transition flex items-center gap-2 shadow-sm border border-blue-600" title="Paste items from clipboard">
+                        <i class="fa-solid fa-clipboard"></i> Paste (<span id="intCount">0</span>)
+                    </button>
                 </div>
 
-                <button onclick="clearList()" class="px-3 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition"><i class="fa-solid fa-trash-can"></i></button>
-                <button onclick="shareList()" id="shareBtn" class="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition"><i class="fa-solid fa-share-nodes"></i></button>
+                <!-- History -->
+                <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg mx-2">
+                    <button onclick="undo()" id="btnUndo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 rounded" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+                    <button onclick="redo()" id="btnRedo" class="p-2 text-slate-400 hover:text-slate-700 disabled:opacity-30 rounded" title="Redo (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+
+                <button onclick="clearList()" class="px-3 py-2 text-sm text-red-600 hover:bg-red-50 border border-red-200 rounded-lg transition" title="Clear List"><i class="fa-solid fa-trash-can"></i></button>
+                <button onclick="shareList()" id="shareBtn" class="px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition" title="Share Link"><i class="fa-solid fa-share-nodes"></i></button>
                 <button onclick="downloadPDF()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg shadow-sm transition text-sm"><i class="fa-solid fa-file-pdf"></i> PDF</button>
             </div>
         </div>
@@ -62,8 +98,11 @@
         <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-4" id="input-section">
             <label class="block text-sm font-semibold text-slate-700 mb-2">Add New Item URL</label>
             <div class="flex flex-col md:flex-row gap-3">
-                <input type="text" id="urlInput" placeholder="Paste Amazon, AliExpress, or eBay link here..." class="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition" onkeypress="handleEnter(event)">
-                <button onclick="processUrl()" id="addBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition shadow-sm min-w-[140px]">Add Link</button>
+                <input type="text" id="urlInput" placeholder="Paste Amazon, AliExpress, or eBay link here..." 
+                    class="flex-1 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    onkeypress="handleEnter(event)">
+                <button onclick="processUrl()" id="addBtn" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-medium transition shadow-sm min-w-[140px]">Add Link</button>
             </div>
             <p class="text-xs text-slate-400 mt-3 border-t border-slate-100 pt-2">
                 <i class="fa-solid fa-circle-info mr-1"></i> 
@@ -71,9 +110,11 @@
             </p>
         </div>
 
-        <!-- List Header & Settings -->
-        <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2 flex-wrap gap-2">
-            <div class="flex items-center gap-2 group">
+        <!-- List Header, Settings & Selection Toolbar -->
+        <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-2 flex-wrap gap-2 min-h-[48px]">
+            
+            <!-- Standard Title View -->
+            <div id="headerStandard" class="flex items-center gap-2 group w-full md:w-auto">
                 <div id="titleDisplayContainer" class="flex items-center gap-2">
                     <h2 class="text-lg font-semibold text-slate-700"><span id="listTitleText">Your List</span> <span class="text-slate-400 font-normal">(<span id="itemCount">0</span>)</span></h2>
                     <button onclick="editTitle()" class="text-slate-300 hover:text-blue-500 transition px-2"><i class="fa-solid fa-pencil"></i></button>
@@ -84,14 +125,39 @@
                     <button onclick="cancelEditTitle()" class="text-red-400"><i class="fa-solid fa-times"></i></button>
                 </div>
             </div>
+
+            <!-- Selection Mode Toolbar (Hidden by default) -->
+            <div id="headerSelection" class="hidden flex items-center gap-2 w-full md:w-auto bg-blue-50 p-1 rounded-lg animate-fade-in">
+                <span class="text-sm font-semibold text-blue-800 px-2"><span id="selectCount">0</span> Selected</span>
+                
+                <!-- Select All Button -->
+                <button onclick="toggleSelectAll()" id="btnSelectAll" class="text-slate-600 hover:text-blue-700 px-2 py-1 text-sm font-medium transition flex items-center gap-1">
+                    <i class="fa-regular fa-square-check"></i> <span id="selectAllText">Select All</span>
+                </button>
+
+                <div class="h-4 w-px bg-blue-200 mx-1"></div>
+                <button onclick="copySelected()" id="btnSelCopy" disabled class="text-slate-600 hover:text-blue-600 disabled:opacity-40 px-2 py-1 text-sm font-medium transition"><i class="fa-solid fa-copy mr-1"></i> Copy</button>
+                <button onclick="cutSelected()" id="btnSelCut" disabled class="text-slate-600 hover:text-blue-600 disabled:opacity-40 px-2 py-1 text-sm font-medium transition"><i class="fa-solid fa-scissors mr-1"></i> Cut</button>
+                <button onclick="deleteSelected()" id="btnSelDel" disabled class="text-slate-600 hover:text-red-600 disabled:opacity-40 px-2 py-1 text-sm font-medium transition"><i class="fa-solid fa-trash mr-1"></i> Delete</button>
+            </div>
             
-            <!-- Settings Dropdown -->
-            <div class="flex items-center gap-3 ml-auto">
-                <div class="relative group">
-                    <button class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
+            <!-- Right Controls -->
+            <div class="flex items-center gap-3 ml-auto" id="headerControls">
+                
+                <button onclick="toggleSelectionMode()" id="btnEnterSelect" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition flex items-center gap-2 px-3 py-1.5 rounded hover:bg-slate-100">
+                    <i class="fa-regular fa-square-check"></i> Select Items
+                </button>
+
+                <button onclick="toggleSelectionMode()" id="btnCancelSelect" class="hidden text-sm font-medium text-red-600 hover:text-red-700 transition flex items-center gap-2 px-3 py-1.5 rounded hover:bg-red-50">
+                    <i class="fa-solid fa-times"></i> Cancel Selection
+                </button>
+
+                <div class="relative">
+                    <button onclick="toggleViewMenu()" class="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded hover:bg-slate-100">
                         <i class="fa-solid fa-sliders"></i> View Options
                     </button>
-                    <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 hidden group-hover:block z-50 p-2">
+                    <!-- Clickable Menu -->
+                    <div id="viewMenuDropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 hidden z-50 p-2">
                         <label class="block px-4 py-2 text-xs font-bold text-slate-400 uppercase">Card Size</label>
                         <button onclick="setGridSize(1)" class="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Large (1 Col)</button>
                         <button onclick="setGridSize(2)" class="block w-full text-left px-4 py-2 text-sm hover:bg-slate-50">Medium (2 Cols)</button>
@@ -117,10 +183,15 @@
 
     <!-- Modals (Projects, Confirm, Edit) -->
     <div id="projectsModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-            <div class="bg-slate-50 px-6 py-4 border-b flex justify-between items-center"><h3 class="font-bold text-slate-800">My Projects</h3><button onclick="closeProjectsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button></div>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden transform transition-all">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">My Projects</h3>
+                <button onclick="closeProjectsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
             <div class="p-0 max-h-[60vh] overflow-y-auto"><ul id="projectsList" class="divide-y divide-slate-100"></ul></div>
-            <div class="bg-slate-50 px-6 py-4 border-t"><button onclick="createNewProject()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium gap-2 flex justify-center items-center"><i class="fa-solid fa-plus"></i> Create New Project</button></div>
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200">
+                <button onclick="createNewProject()" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i> Create New Project</button>
+            </div>
         </div>
     </div>
 
@@ -128,17 +199,21 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6 text-center">
             <div class="mb-4 text-yellow-500"><i class="fa-solid fa-triangle-exclamation text-4xl"></i></div>
             <h3 class="text-lg font-bold text-slate-800 mb-2" id="confirmTitle">Confirm</h3>
-            <p class="text-slate-600 mb-6" id="confirmMessage">Sure?</p>
+            <p class="text-slate-600 mb-6" id="confirmMessage">Are you sure?</p>
             <div class="flex gap-3 justify-center">
-                <button onclick="closeConfirmModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
-                <button id="confirmYesBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg">Yes</button>
+                <button onclick="closeConfirmModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition">Cancel</button>
+                <button id="confirmYesBtn" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition">Yes</button>
             </div>
         </div>
     </div>
 
+    <!-- Edit Modal -->
     <div id="itemModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-slate-50 px-6 py-4 border-b flex justify-between items-center"><h3 class="font-bold text-slate-800">Edit Details</h3><button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times"></i></button></div>
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden transform transition-all scale-100">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Edit Details</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
             <div class="p-6 space-y-4">
                 <input type="hidden" id="modalId"><input type="hidden" id="modalOriginalUrl">
                 <div><label class="block text-sm font-medium text-slate-700 mb-1">Name</label><input type="text" id="modalTitle" class="w-full px-3 py-2 border border-slate-300 rounded-md"></div>
@@ -152,7 +227,7 @@
                     <i class="fa-solid fa-camera"></i> Replace Image with Screenshot
                 </button>
             </div>
-            <div class="bg-slate-50 px-6 py-4 border-t flex justify-end gap-3">
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-end gap-3">
                 <button onclick="closeModal()" class="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg">Cancel</button>
                 <button onclick="saveModalItem()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium">Save</button>
             </div>
@@ -164,20 +239,20 @@
         let currentProject = { id: generateUUID(), title: "My List", items: [], settings: { cols: 3 } };
         let isTransient = false;
         let showPrices = true;
+        let isSelectionMode = false;
+        let selectedIds = new Set(); // Track selected items by ID
+        let currentSortable = null; // Global Sortable Instance
+        
         const MAX_HISTORY = 50;
         let historyStack = [], futureStack = [];
 
         // --- Extension Handshake ---
-        setInterval(() => {
-            // Periodically ask extension "Are you there and do you have items?"
-            window.postMessage({ type: 'SHOPLIST_CHECK_EXTENSION' }, '*');
-        }, 2000);
+        setInterval(() => { window.postMessage({ type: 'SHOPLIST_CHECK_EXTENSION' }, '*'); }, 2000);
 
         window.addEventListener('message', (event) => {
             if (event.data.type === 'SHOPLIST_EXTENSION_STATUS') {
                 const btn = document.getElementById('btnExtensionPaste');
                 const countSpan = document.getElementById('extCount');
-                
                 if (event.data.itemCount > 0) {
                     btn.classList.remove('hidden');
                     countSpan.innerText = event.data.itemCount;
@@ -185,7 +260,6 @@
                     btn.classList.add('hidden');
                 }
             }
-            
             if (event.data.type === 'SHOPLIST_DATA_RESPONSE') {
                 const items = event.data.items;
                 if (items && items.length > 0) {
@@ -209,15 +283,83 @@
             }
         });
 
-        function pasteFromExtension() {
-            // Request paste and clear
-            window.dispatchEvent(new CustomEvent('SHOPLIST_REQUEST_PASTE', { detail: { clearAfter: true } }));
-        }
+        function pasteFromExtension() { window.dispatchEvent(new CustomEvent('SHOPLIST_REQUEST_PASTE', { detail: { clearAfter: true } })); }
 
         // --- Initialization ---
-        window.addEventListener('DOMContentLoaded', initApp);
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Ignore if user is typing in an input/textarea
+                if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') {
+                    return;
+                }
+
+                // Undo/Redo
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
+                
+                // Select All (Cmd+A) - Only in selection mode
+                if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                    if (isSelectionMode) {
+                        e.preventDefault();
+                        toggleSelectAll();
+                    }
+                }
+
+                // Paste (Cmd+V) - If clipboard has items
+                if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+                    const clip = JSON.parse(localStorage.getItem('shopTracker_clipboard') || '[]');
+                    if (clip.length > 0) {
+                        e.preventDefault();
+                        pasteInternal();
+                    }
+                }
+
+                // Selection Mode Actions
+                if (isSelectionMode) {
+                    // Copy: Ctrl+C
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedIds.size > 0) {
+                        e.preventDefault();
+                        copySelected();
+                    }
+                    // Cut: Ctrl+X
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'x' && selectedIds.size > 0) {
+                        e.preventDefault();
+                        cutSelected();
+                    }
+                    // Delete: Backspace or Delete
+                    if ((e.key === 'Backspace' || e.key === 'Delete') && selectedIds.size > 0) {
+                        e.preventDefault();
+                        deleteSelected();
+                    }
+                    // Escape to exit
+                    if (e.key === 'Escape') {
+                        toggleSelectionMode();
+                    }
+                }
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                const menu = document.getElementById('viewMenuDropdown');
+                const btn = e.target.closest('button');
+                // If not clicking the toggle button and menu is open, close it
+                if (!menu.classList.contains('hidden')) {
+                    if (!btn || !btn.innerHTML.includes('View Options')) {
+                        if (!menu.contains(e.target)) {
+                            toggleViewMenu();
+                        }
+                    }
+                }
+            });
+        });
 
         function initApp() {
+            // Check Internal Clipboard
+            checkInternalClipboard();
+
             const urlParams = new URLSearchParams(window.location.search);
             const sharedData = urlParams.get('data');
             if (sharedData) {
@@ -240,10 +382,174 @@
             else createNewProject();
         }
 
+        // --- View Options Menu ---
+        function toggleViewMenu() {
+            const menu = document.getElementById('viewMenuDropdown');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- Selection Mode Logic ---
+        function toggleSelectionMode() {
+            isSelectionMode = !isSelectionMode;
+            selectedIds.clear();
+            
+            // Toggle Header UI
+            const stdHeader = document.getElementById('headerStandard');
+            const selHeader = document.getElementById('headerSelection');
+            const btnEnter = document.getElementById('btnEnterSelect');
+            const btnCancel = document.getElementById('btnCancelSelect');
+            
+            if (isSelectionMode) {
+                stdHeader.classList.add('hidden');
+                selHeader.classList.remove('hidden');
+                btnEnter.classList.add('hidden'); // Hide the "Select Items" button itself
+                btnCancel.classList.remove('hidden');
+            } else {
+                stdHeader.classList.remove('hidden');
+                selHeader.classList.add('hidden');
+                btnEnter.classList.remove('hidden');
+                btnCancel.classList.add('hidden');
+            }
+            
+            updateSelectionUI();
+            refreshUI(); // Re-renders cards with checkboxes/outlines
+        }
+
+        function toggleSelectAll() {
+            const allIds = currentProject.items.map(i => i.id);
+            
+            if (selectedIds.size === allIds.length && allIds.length > 0) {
+                // Deselect All
+                selectedIds.clear();
+            } else {
+                // Select All
+                selectedIds.clear();
+                allIds.forEach(id => selectedIds.add(id));
+            }
+            
+            updateSelectionUI();
+            refreshUI();
+        }
+
+        function toggleItemSelection(id) {
+            if (selectedIds.has(id)) selectedIds.delete(id);
+            else selectedIds.add(id);
+            updateSelectionUI();
+            refreshUI(); // Efficient enough for this scale
+        }
+
+        function updateSelectionUI() {
+            document.getElementById('selectCount').innerText = selectedIds.size;
+            const disabled = selectedIds.size === 0;
+            document.getElementById('btnSelCopy').disabled = disabled;
+            document.getElementById('btnSelCut').disabled = disabled;
+            document.getElementById('btnSelDel').disabled = disabled;
+            
+            // Update "Select All" text
+            const btnSelectAllText = document.getElementById('selectAllText');
+            const btnSelectAllIcon = document.querySelector('#btnSelectAll i');
+            
+            if (currentProject.items.length > 0 && selectedIds.size === currentProject.items.length) {
+                btnSelectAllText.innerText = "Deselect All";
+                btnSelectAllIcon.className = "fa-regular fa-square";
+            } else {
+                btnSelectAllText.innerText = "Select All";
+                btnSelectAllIcon.className = "fa-regular fa-square-check";
+            }
+        }
+
+        function copySelected() {
+            if (selectedIds.size === 0) return;
+            const itemsToCopy = currentProject.items.filter(i => selectedIds.has(i.id));
+            localStorage.setItem('shopTracker_clipboard', JSON.stringify(itemsToCopy));
+            localStorage.setItem('shopTracker_clipboard_fresh', 'true'); // Mark as fresh copy
+            checkInternalClipboard(); // Show paste button
+            alert(`Copied ${itemsToCopy.length} items to clipboard.`);
+            toggleSelectionMode(); // Exit mode
+        }
+
+        function cutSelected() {
+            if (selectedIds.size === 0) return;
+            
+            // Copy first
+            const itemsToCopy = currentProject.items.filter(i => selectedIds.has(i.id));
+            localStorage.setItem('shopTracker_clipboard', JSON.stringify(itemsToCopy));
+            localStorage.setItem('shopTracker_clipboard_fresh', 'true'); // Mark as fresh copy
+            checkInternalClipboard();
+
+            // Then Delete
+            commitHistory("Cut items");
+            currentProject.items = currentProject.items.filter(i => !selectedIds.has(i.id));
+            saveCurrentProjectState();
+            
+            toggleSelectionMode(); // Exit
+            // UI Refresh happens inside toggleSelectionMode -> refreshUI
+        }
+
+        function deleteSelected() {
+            if (selectedIds.size === 0) return;
+            // Use Custom Modal instead of native confirm
+            showConfirm("Delete Items?", `Are you sure you want to delete ${selectedIds.size} selected items?`, () => {
+                commitHistory("Deleted items");
+                currentProject.items = currentProject.items.filter(i => !selectedIds.has(i.id));
+                saveCurrentProjectState();
+                toggleSelectionMode(); // Exit selection mode on success
+            });
+        }
+
+        // --- Internal Clipboard Logic ---
+        function checkInternalClipboard() {
+            const clip = JSON.parse(localStorage.getItem('shopTracker_clipboard') || '[]');
+            const isFresh = localStorage.getItem('shopTracker_clipboard_fresh') === 'true';
+            const btn = document.getElementById('btnInternalPaste');
+            const countSpan = document.getElementById('intCount');
+            
+            if (clip.length > 0) {
+                btn.classList.remove('hidden');
+                countSpan.innerText = clip.length;
+                
+                // Toggle classes for Solid vs Outline based on freshness
+                if (isFresh) {
+                    // Solid Blue (Fresh Copy)
+                    btn.className = "px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition flex items-center gap-2 shadow-sm border border-blue-600";
+                } else {
+                    // Outlined (Pasted/Stale)
+                    btn.className = "px-3 py-2 text-sm bg-white hover:bg-blue-50 text-blue-600 rounded-lg transition flex items-center gap-2 shadow-sm border border-blue-600";
+                }
+            } else {
+                btn.classList.add('hidden');
+            }
+        }
+
+        function pasteInternal() {
+            const clip = JSON.parse(localStorage.getItem('shopTracker_clipboard') || '[]');
+            if (clip.length === 0) return;
+
+            commitHistory("Pasted items");
+            clip.forEach(item => {
+                // Generate new ID to avoid collisions
+                const newItem = { ...item, id: Date.now() + Math.floor(Math.random() * 10000) };
+                currentProject.items.push(newItem);
+            });
+            
+            // Mark clipboard as "used" (not fresh anymore)
+            localStorage.setItem('shopTracker_clipboard_fresh', 'false');
+            
+            saveCurrentProjectState();
+            refreshUI();
+            checkInternalClipboard(); // Update button style
+        }
+
         // --- Core Functions ---
         function generateUUID() { return crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => (Math.random()*16|0).toString(16)); }
         
         function refreshUI() {
+            // 1. DESTROY existing sortable FIRST to clear events
+            if (currentSortable) {
+                currentSortable.destroy();
+                currentSortable = null;
+            }
+
             document.getElementById('listTitleText').innerText = currentProject.title;
             document.getElementById('listTitleInput').value = currentProject.title;
             document.getElementById('btnSaveProject').classList.toggle('hidden', !isTransient);
@@ -256,18 +562,27 @@
             else if (cols === 2) container.classList.add('grid-cols-1', 'md:grid-cols-2');
             else container.classList.add('grid-cols-1', 'md:grid-cols-2', 'lg:grid-cols-3');
 
+            // 2. RENDER list items (this clears container.innerHTML)
             renderItems();
-            new Sortable(container, {
-                animation: 150, ghostClass: 'sortable-ghost', delay: 100, delayOnTouchOnly: true,
-                onEnd: () => {
-                    commitHistory("Reorder");
-                    const newItems = [];
-                    document.querySelectorAll('.item-card').forEach(c => newItems.push(currentProject.items.find(i => i.id === parseInt(c.dataset.id))));
-                    currentProject.items = newItems; saveCurrentProjectState();
-                }
-            });
+            
+            // 3. RE-INIT Sortable only if not in selection mode
+            if (!isSelectionMode) {
+                currentSortable = new Sortable(container, {
+                    animation: 150, ghostClass: 'sortable-ghost', delay: 100, delayOnTouchOnly: true,
+                    onEnd: () => {
+                        commitHistory("Reorder");
+                        const newItems = [];
+                        document.querySelectorAll('.item-card').forEach(c => newItems.push(currentProject.items.find(i => i.id === parseInt(c.dataset.id))));
+                        currentProject.items = newItems; saveCurrentProjectState();
+                    }
+                });
+            }
             
             updateHistoryUI();
+        }
+        
+        function handleEnter(e) {
+            if (e.key === 'Enter') processUrl();
         }
 
         function renderItems() {
@@ -303,26 +618,46 @@
                 else imgContent = `<div class="w-full h-60 bg-slate-100 flex items-center justify-center text-slate-300"><i class="fa-solid fa-image text-4xl"></i></div>`;
 
                 const card = document.createElement('div');
-                card.className = "item-card bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition group relative flex flex-col";
+                // Add selection classes
+                const isSelected = selectedIds.has(item.id);
+                card.className = `item-card bg-white rounded-xl shadow-sm border transition group relative flex flex-col ${isSelected ? 'border-blue-500 ring-2 ring-blue-500 bg-blue-50' : 'border-slate-200 hover:shadow-md'}`;
                 card.dataset.id = item.id;
                 
-                const actionBtns = `
+                // Card Actions (Edit/Delete) - Hide if in Selection Mode
+                const actionBtns = isSelectionMode ? '' : `
                     <div class="flex gap-2 ml-auto">
                         <button onclick="editItem(${item.id})" class="text-slate-400 hover:text-blue-600 transition p-1" title="Edit"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="reloadItemWithScreenshot(${item.id})" class="text-slate-400 hover:text-purple-600 transition p-1" title="Reload with Screenshot"><i class="fa-solid fa-camera"></i></button>
                         <button onclick="removeItem(${item.id})" class="text-slate-400 hover:text-red-600 transition p-1" title="Remove"><i class="fa-solid fa-trash"></i></button>
                     </div>`;
 
                 const priceHTML = showPrices ? `<span class="text-xl font-bold ${isPriceUnknown ? 'text-slate-400' : 'text-emerald-600'}">${priceDisplay}</span>` : '';
 
+                // Click Handler: Navigation vs Selection
+                // If selection mode, clicking anywhere selects. If not, clicking image/title navigates.
+                const clickAction = isSelectionMode ? `onclick="toggleItemSelection(${item.id}); return false;"` : '';
+                const linkTarget = isSelectionMode ? 'javascript:void(0)' : item.url;
+                const linkAttrs = isSelectionMode ? '' : 'target="_blank"';
+
+                // Checkbox UI
+                const checkbox = isSelectionMode ? `
+                    <div class="absolute top-2 left-2 z-20">
+                        <div class="w-6 h-6 rounded-full border-2 ${isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300'} flex items-center justify-center shadow-sm">
+                            ${isSelected ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                        </div>
+                    </div>
+                ` : '';
+
                 card.innerHTML = item.loading ? `
                     <div class="relative overflow-hidden cursor-progress">${imgContent}</div>
                     <div class="p-4 flex flex-col flex-1 space-y-3"><div class="h-4 bg-slate-200 rounded w-3/4 skeleton"></div><div class="h-4 bg-slate-200 rounded w-1/2 skeleton"></div></div>` : `
-                    <a href="${item.url}" target="_blank" class="block relative overflow-hidden bg-white">
+                    ${checkbox}
+                    <a href="${linkTarget}" ${linkAttrs} ${clickAction} class="block relative overflow-hidden bg-white rounded-t-xl">
                         <span class="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm z-10">${domain}</span>
                         ${imgContent}
                     </a>
-                    <div class="p-4 flex flex-col flex-1">
-                        <a href="${item.url}" target="_blank" class="text-slate-800 font-semibold leading-tight hover:text-blue-600 transition mb-2 line-clamp-2" title="${item.title}">${item.title}</a>
+                    <div class="p-4 flex flex-col flex-1" ${clickAction}>
+                        <a href="${linkTarget}" ${linkAttrs} class="text-slate-800 font-semibold leading-tight hover:text-blue-600 transition mb-2 line-clamp-2" title="${item.title}">${item.title}</a>
                         <div class="mt-auto flex items-center pt-3 border-t border-slate-100">${priceHTML}${actionBtns}</div>
                     </div>`;
                 container.appendChild(card);
@@ -343,27 +678,110 @@
         }
 
         // --- Standard Metadata Logic (Preserved) ---
-        // (Keeping existing helpers for Amazon/AliExpress logic... simplified here for brevity but assume full logic exists)
         function getAmazonAsin(url) { try { const u=new URL(url); if(u.hostname.includes('amazon')||u.hostname.includes('amzn')) { const m=u.pathname.match(/\/(dp|gp\/product|exec\/obidos\/asin)\/([A-Z0-9]{10})/); if(m) return m[2]; } } catch(e){} return null; }
-        
+        function validateImage(url){return new Promise(r=>{const i=new Image();i.onload=()=>r(i.naturalWidth>1);i.onerror=()=>r(false);i.src=url;});}
+        function inferTitleFromUrl(u){try{const p=new URL(u).pathname;let s="";if(u.includes('amazon')){let m=p.match(/^\/([^\/]+)\/(dp|gp)/);if(m)s=m[1];}else if(u.includes('ebay')){let m=p.match(/\/itm\/([^\/]+)\/\d+/);if(m)s=m[1];}if(s)return decodeURIComponent(s).replace(/[-_]/g,' ');}catch(e){}return"";}
+        function findAli(t){let m=t.match(/(https?:\/\/[^\s"']+\.alicdn\.com\/kf\/[^\s"']+\.(?:jpg|png))/i);return m?m[1]:null;}
+        function findAmz(t){let m=t.match(/"large":"(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+\.jpg)"/);if(m)return m[1];let m2=t.match(/data-old-hires="(https:\/\/m\.media-amazon\.com\/images\/I\/[^"]+\.jpg)"/);return m2?m2[1]:null;}
+        function findAmzT(t){let m=t.match(/<span id="productTitle"[^>]*>\s*([^<]+)\s*<\/span>/);return m?m[1].trim():null;}
+
         async function fetchMetadata(url, rawInputUrl, forceScreenshot = false) {
-            // ... (Insert the FULL robust fetchMetadata logic from previous steps here) ...
-            // Placeholder for structural correctness:
-            let result = { title: "", image: "", description: "" };
-            // ... real logic ...
-            return result;
+            let res = { title: "", image: "", description: "" };
+            let succ = false;
+            let scrapeUrl = url;
+            let isAli = url.includes('aliexpress');
+            let isAmz = url.includes('amazon') || url.includes('amzn');
+
+            if (isAli) { try{const u=new URL(url);u.hostname='m.aliexpress.com';scrapeUrl=u.toString();}catch(e){scrapeUrl=url.replace(/aliexpress\.(us|com)/,'m.aliexpress.com');} }
+            
+            let asin = getAmazonAsin(url);
+            if (!forceScreenshot && asin) {
+                const cand = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.L.jpg`;
+                if(await validateImage(cand)) res.image = cand;
+            }
+
+            // Strategy 1: Microlink
+            if (!res.image || isAli) { 
+                try {
+                    let apiUrl = `https://api.microlink.io?url=${encodeURIComponent(scrapeUrl)}`;
+                    if (forceScreenshot) apiUrl += '&screenshot=true&meta=false&overlay.browser=dark'; else apiUrl += '&meta=true';
+                    const r = await fetch(apiUrl); const j = await r.json();
+                    if (j.status === 'success') {
+                        const d = j.data;
+                        if (!forceScreenshot) {
+                            if (d.title && !d.title.includes("Amazon") && !d.title.includes("Page Not Found")) res.title = d.title;
+                            if (!asin && d.url) { asin = getAmazonAsin(d.url); if (asin && await validateImage(`https://images-na.ssl-images-amazon.com/images/P/${asin}.01.L.jpg`)) res.image = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.L.jpg`; }
+                            if (!res.image) res.image = d.image?.url || "";
+                        } else { if (d.screenshot?.url) { res.image = d.screenshot.url; succ = true; } }
+                        if (!forceScreenshot && (res.title || res.image)) succ = true;
+                    }
+                } catch (e) {}
+            }
+
+            // Strategy 2: AllOrigins
+            if ((!succ || (isAli && !res.image) || isAmz) && !forceScreenshot) {
+                try {
+                    const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(scrapeUrl)}`); const d = await r.json();
+                    if (d.contents) {
+                        const h = d.contents;
+                        if (isAli && !res.image) { const i = findAli(h); if(i) res.image = i; }
+                        if (isAmz) { const i = findAmz(h); if(i) res.image = i; const t = findAmzT(h); if(t) res.title = t; }
+                        const parser = new DOMParser(); const doc = parser.parseFromString(h, "text/html");
+                        const gm = (p) => doc.querySelector(`meta[property="${p}"]`)?.content || doc.querySelector(`meta[name="${p}"]`)?.content || "";
+                        if (!res.title) res.title = gm("og:title") || doc.title || "";
+                        if (!res.image) res.image = gm("og:image") || "";
+                        if (res.title.includes(" | AliExpress")) res.title = res.title.split(" | AliExpress")[0];
+                    }
+                } catch (e) {}
+            }
+
+            // Fallbacks
+            if (!res.image && !forceScreenshot && asin) { 
+                const cand = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.L.jpg`; 
+                if(await validateImage(cand)) res.image = cand; 
+            }
+            if (!res.title || res.title.includes("Amazon")) { const t = inferTitleFromUrl(rawInputUrl||url); if(t) res.title = t; }
+            if (!res.image && !forceScreenshot) { 
+                let tUrl = url; if(tUrl.includes('aliexpress.us')) tUrl=tUrl.replace('aliexpress.us','aliexpress.com');
+                res.image = `https://image.thum.io/get/width/400/crop/800/noanimate/${encodeURIComponent(tUrl)}`; 
+            }
+            if (!res.title) { try{ res.title = `Item from ${new URL(url).hostname.replace('www.','')}`; }catch(e){res.title="Unknown";} }
+            return res;
         }
-        // Note: Ensure processUrl calls fetchMetadata correctly
 
         async function processUrl() { 
             const input = document.getElementById('urlInput');
             const url = input.value;
             if(!url) return;
             commitHistory("Added item");
-            currentProject.items.push({id: Date.now(), url, title:"Loading...", price:0, loading:true});
+            const tempId = Date.now();
+            currentProject.items.push({id: tempId, url, title:"Loading...", price:0, loading:true});
             saveCurrentProjectState(); refreshUI();
             input.value='';
-            // In real implementation, call fetchMetadata here and update item
+
+            try {
+                const data = await fetchMetadata(url, url, false);
+                let extractedPrice = null;
+                const priceRegex = /(\$|USD|€|£)\s?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))/i;
+                const textToScan = (data.title + " " + data.description);
+                const priceMatch = textToScan.match(priceRegex);
+                if (priceMatch) extractedPrice = parseFloat(priceMatch[2].replace(/,/g, ''));
+
+                const index = currentProject.items.findIndex(i => i.id === tempId);
+                if (index !== -1) {
+                    currentProject.items[index] = {
+                        ...currentProject.items[index],
+                        title: data.title,
+                        price: extractedPrice,
+                        image: data.image,
+                        loading: false
+                    };
+                }
+            } catch (error) {
+                const index = currentProject.items.findIndex(i => i.id === tempId);
+                if (index !== -1) currentProject.items[index] = { ...currentProject.items[index], title: "Link (Edit details)", loading: false, error: true };
+            }
+            saveCurrentProjectState(); refreshUI();
         }
 
         // --- Modal Actions ---
@@ -394,7 +812,6 @@
         function reloadItemWithScreenshotFromModal() {
             const id = parseInt(document.getElementById('modalId').value);
             const url = document.getElementById('modalOriginalUrl').value;
-            // Generate screenshot URL (Thum.io)
             const newImg = `https://image.thum.io/get/width/1024/crop/800/noanimate/${encodeURIComponent(url)}`;
             document.getElementById('modalImage').value = newImg;
         }
@@ -447,6 +864,24 @@
             const u=`${window.location.origin}${window.location.pathname}?data=${LZString.compressToEncodedURIComponent(s)}`;
             const t=document.createElement("textarea"); t.value=u; document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
             document.getElementById('shareMessage').classList.remove('hidden'); setTimeout(()=>document.getElementById('shareMessage').classList.add('hidden'), 3000);
+        }
+        function reloadItemWithScreenshot(id) {
+            const index = currentProject.items.findIndex(i => i.id === id);
+            if (index === -1) return;
+            commitHistory("Reloaded image (screenshot)");
+            const item = currentProject.items[index];
+            currentProject.items[index] = { ...item, loading: true };
+            refreshUI();
+
+            // Direct call for quick inline reload not via modal
+            let finalImage = `https://image.thum.io/get/width/1024/crop/800/noanimate/${encodeURIComponent(item.url)}`;
+            
+            // Simulate slight delay or verify if needed, but Thum.io is instant
+            setTimeout(() => {
+                 currentProject.items[index] = { ...currentProject.items[index], image: finalImage, loading: false };
+                 saveCurrentProjectState();
+                 refreshUI();
+            }, 500);
         }
     </script>
 </body>

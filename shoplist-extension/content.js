@@ -67,47 +67,42 @@ function scrapeProductData() {
     let image = "";
 
     try {
-        // --- AliExpress Deep Scrape (JSON-LD) ---
+        // --- AliExpress Deep Scrape (JSON-LD & New Selectors) ---
         if (url.includes('aliexpress')) {
-            // 1. Try to find the "runParams" script or JSON-LD which is most reliable for price
+            // 1. Title & Image first (usually easy)
+            const ogTitle = document.querySelector('meta[property="og:title"]');
+            if (ogTitle) title = ogTitle.content.split('|')[0].trim();
+            
+            const ogImage = document.querySelector('meta[property="og:image"]');
+            if (ogImage) image = ogImage.content;
+
+            // 2. Price Strategy A: JSON-LD (Most reliable if present)
             const scripts = document.querySelectorAll('script');
             let foundJsonPrice = false;
-
-            // Scan for JSON-LD first
             for(let s of scripts) {
                 if(s.type === 'application/ld+json') {
                     try {
                         const json = JSON.parse(s.innerText);
-                        if(json.image) image = Array.isArray(json.image) ? json.image[0] : json.image;
-                        if(json.name) title = json.name;
                         if(json.offers) {
-                            // Price can be single object or array of offers
                             const offer = Array.isArray(json.offers) ? json.offers[0] : json.offers;
-                            if(offer.price) {
-                                price = parseFloat(offer.price);
-                                foundJsonPrice = true;
-                            } else if (offer.lowPrice) {
-                                price = parseFloat(offer.lowPrice);
-                                foundJsonPrice = true;
-                            }
+                            if(offer.price) { price = parseFloat(offer.price); foundJsonPrice = true; }
+                            else if (offer.lowPrice) { price = parseFloat(offer.lowPrice); foundJsonPrice = true; }
                         }
                     } catch(e) {}
                 }
                 if(foundJsonPrice) break;
             }
 
-            // Fallback to meta tags if JSON failed
+            // 3. Price Strategy B: New Class Selectors (User Requested)
+            // Looks for "price--current" or "product-price-current" partials
             if (!foundJsonPrice) {
-                const priceMeta = document.querySelector('meta[property="product:price:amount"]');
-                if (priceMeta) price = parseFloat(priceMeta.content);
+                const priceElem = document.querySelector('[class*="price--current"], [class*="product-price-current"], [class*="price-default--current"]');
+                if (priceElem) {
+                     // Inner text might be "$4.47" or "US $4.47"
+                     // We strip everything non-numeric/decimal
+                     price = parsePrice(priceElem.innerText);
+                }
             }
-            
-            // Visual Fallback
-            if (!image) image = document.querySelector('meta[property="og:image"]')?.content;
-            if (!title || title.includes("AliExpress")) title = document.querySelector('meta[property="og:title"]')?.content || document.title;
-            
-            // Clean title
-            title = title.split('|')[0].trim();
         } 
         
         // --- Amazon ---
@@ -146,6 +141,7 @@ function scrapeProductData() {
 
 function parsePrice(str) {
     if (!str) return 0;
+    // Matches numbers like 10.99, 1,200.50
     const match = str.match(/(\d[\d,\.]*)/);
     if (match) return parseFloat(match[0].replace(/,/g, ''));
     return 0;
@@ -159,7 +155,7 @@ function cleanUrl(url) {
     } catch (e) { return url; }
 }
 
-// --- 3. Tracker Website Integration (Two-Way Communication) ---
+// --- 3. Tracker Website Integration ---
 
 function initTrackerIntegration() {
     // 1. Listen for "CHECK_STATUS" request from the website
